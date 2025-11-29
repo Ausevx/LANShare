@@ -1,0 +1,11 @@
+# LAN File-Sharing Platform - Python Dependencies
+# Flask web framework and extensions
+Flask>=3.0.0
+Werkzeug>=3.0.0
+
+# Production WSGI server (optional, for production deployments)
+gunicorn>=21.0.0
+
+# Additional utilities
+python-dotenv>=1.0.0
+

@@ -1,0 +1,46 @@
+# LAN File-Sharing Platform - Git Ignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+.eggs/
+*.egg-info/
+*.egg
+
+# Environment
+.env
+.env.local
+*.local
+
+# Uploads directory (but keep the folder)
+uploads/*
+!uploads/.gitkeep
+
+# Logs
+logs/
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/
+
+# Metadata
+.metadata.json
+

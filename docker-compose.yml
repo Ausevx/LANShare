@@ -1,0 +1,35 @@
+# LAN File-Sharing Platform - Docker Compose Configuration
+# Use: docker-compose up -d
+
+version: '3.8'
+
+services:
+  fileserver:
+    build: .
+    image: fileshare:latest
+    container_name: fileshare-server
+    ports:
+      - "${PORT:-8000}:8000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    environment:
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8000
+      - UPLOAD_DIR=/app/uploads
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-536870912}
+      - ALLOWED_EXTENSIONS=${ALLOWED_EXTENSIONS:-pdf,png,jpg,jpeg,gif,txt,md,json,csv,doc,docx,xlsx,xls,ppt,pptx,zip,tar,gz,mp3,mp4,wav,avi,mov}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - fileshare-network
+
+networks:
+  fileshare-network:
+    driver: bridge
+

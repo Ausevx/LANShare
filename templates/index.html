@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAN FileShare - Local Network File Sharing</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                screens: {
+                    'xs': '400px',
+                    'sm': '640px',
+                    'md': '768px',
+                    'lg': '1024px',
+                    'xl': '1280px',
+                    '2xl': '1536px',
+                },
+                extend: {
+                    colors: {
+                        dark: {
+                            900: '#0a0a0f',
+                            800: '#12121a',
+                            700: '#1a1a24',
+                            600: '#24242f',
+                            500: '#2e2e3a',
+                        },
+                        accent: {
+                            DEFAULT: '#06b6d4',
+                            dark: '#0891b2',
+                            light: '#22d3ee',
+                            glow: 'rgba(6, 182, 212, 0.3)',
+                        },
+                        success: '#10b981',
+                        warning: '#f59e0b',
+                        danger: '#ef4444',
+                    },
+                    fontFamily: {
+                        sans: ['Space Grotesk', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    animation: {
+                        'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
+                        'slide-up': 'slide-up 0.3s ease-out',
+                        'fade-in': 'fade-in 0.2s ease-out',
+                    },
+                    keyframes: {
+                        'pulse-glow': {
+                            '0%, 100%': { boxShadow: '0 0 20px rgba(6, 182, 212, 0.2)' },
+                            '50%': { boxShadow: '0 0 40px rgba(6, 182, 212, 0.4)' },
+                        },
+                        'slide-up': {
+                            '0%': { transform: 'translateY(10px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                        'fade-in': {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #2e2e3a #12121a;
+        }
+        *::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        *::-webkit-scrollbar-track {
+            background: #12121a;
+        }
+        *::-webkit-scrollbar-thumb {
+            background: #2e2e3a;
+            border-radius: 4px;
+        }
+        *::-webkit-scrollbar-thumb:hover {
+            background: #3e3e4a;
+        }
+        .drop-zone-active {
+            border-color: #06b6d4 !important;
+            background: rgba(6, 182, 212, 0.1) !important;
+        }
+        .file-card:hover .file-actions {
+            opacity: 1;
+        }
+        .gradient-border {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(139, 92, 246, 0.3));
+            padding: 1px;
+            border-radius: 0.75rem;
+        }
+        .gradient-border-inner {
+            background: #12121a;
+            border-radius: calc(0.75rem - 1px);
+        }
+        .upload-progress-ring {
+            transform: rotate(-90deg);
+        }
+        .upload-progress-ring circle {
+            transition: stroke-dashoffset 0.3s ease;
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .skeleton {
+            background: linear-gradient(90deg, #1a1a24 25%, #24242f 50%, #1a1a24 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        @media (max-width: 640px) {
+            .file-card .file-actions {
+                opacity: 1 !important;
+                background: linear-gradient(to top, rgba(10, 10, 15, 0.95), transparent) !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-dark-900 text-gray-100 min-h-screen font-sans antialiased">
+    <!-- Header -->
+    <header class="fixed top-0 left-0 right-0 z-50 bg-dark-800/80 backdrop-blur-xl border-b border-dark-600">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+            <!-- Mobile Header -->
+            <div class="flex items-center justify-between h-14 sm:h-16">
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <!-- Minimalist Black & White Logo -->
+                    <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-white flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7" rx="1" />
+                            <rect x="14" y="3" width="7" height="7" rx="1" />
+                            <rect x="3" y="14" width="7" height="7" rx="1" />
+                            <path d="M14 17.5h7M17.5 14v7" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="hidden xs:block">
+                        <h1 class="text-lg sm:text-xl font-bold text-white">FileShare</h1>
+                        <p class="text-[10px] sm:text-xs text-gray-500 font-mono">LAN Transfer</p>
+                    </div>
+                </div>
+                
+                <!-- Search Bar - Hidden on mobile, shown in separate row -->
+                <div class="hidden md:flex flex-1 max-w-xl mx-4 lg:mx-8">
+                    <div class="relative w-full">
+                        <input type="text" id="searchInput" placeholder="Search files..." 
+                            class="w-full bg-dark-700 border border-dark-500 rounded-xl px-4 py-2.5 pl-11 text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-all placeholder-gray-500">
+                        <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </div>
+                </div>
+                
+                <!-- Stats & Connect -->
+                <div class="flex items-center gap-2 sm:gap-4">
+                    <div class="text-right hidden lg:block">
+                        <p class="text-xs text-gray-500">Files</p>
+                        <p id="totalFiles" class="text-lg font-semibold text-white font-mono">0</p>
+                    </div>
+                    <div class="text-right hidden lg:block">
+                        <p class="text-xs text-gray-500">Storage</p>
+                        <p id="storageUsed" class="text-lg font-semibold text-gray-300 font-mono">0 B</p>
+                    </div>
+                    <div class="w-px h-8 bg-dark-600 hidden lg:block"></div>
+                    <!-- Connect Button -->
+                    <button id="connectBtn" class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-white text-black rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7" rx="1"/>
+                            <rect x="14" y="3" width="7" height="7" rx="1"/>
+                            <rect x="3" y="14" width="7" height="7" rx="1"/>
+                            <rect x="14" y="14" width="7" height="7" rx="1"/>
+                        </svg>
+                        <span class="hidden sm:inline">Connect</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Mobile Search Bar -->
+            <div class="md:hidden pb-3">
+                <div class="relative">
+                    <input type="text" id="searchInputMobile" placeholder="Search files..." 
+                        class="w-full bg-dark-700 border border-dark-500 rounded-xl px-4 py-2.5 pl-11 text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-all placeholder-gray-500">
+                    <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="pt-28 md:pt-24 pb-8 px-3 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <!-- Upload Section -->
+        <div class="mb-6 sm:mb-8">
+            <div id="dropZone" class="gradient-border group cursor-pointer transition-all duration-300 sm:hover:scale-[1.01]">
+                <div class="gradient-border-inner p-4 sm:p-8 text-center">
+                    <div class="flex flex-col items-center gap-3 sm:gap-4">
+                        <div class="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl bg-dark-700 border-2 border-dashed border-dark-500 flex items-center justify-center group-hover:border-accent group-hover:bg-accent/10 transition-all duration-300">
+                            <svg class="w-7 h-7 sm:w-10 sm:h-10 text-gray-500 group-hover:text-accent transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-base sm:text-lg font-medium text-gray-200">Drop files here or <span class="text-accent">browse</span></p>
+                            <p class="text-xs sm:text-sm text-gray-500 mt-1">PDF, Images, Docs & more • Max 500MB</p>
+                        </div>
+                        <input type="file" id="fileInput" multiple class="hidden" accept=".pdf,.png,.jpg,.jpeg,.gif,.txt,.md,.json,.csv,.doc,.docx,.xlsx,.xls,.ppt,.pptx,.zip,.tar,.gz,.mp3,.mp4,.wav,.avi,.mov">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Progress Section -->
+        <div id="uploadProgress" class="mb-8 hidden">
+            <div class="bg-dark-800 rounded-xl border border-dark-600 p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-medium text-gray-300">Uploading Files</h3>
+                    <button id="cancelAllUploads" class="text-xs text-gray-500 hover:text-danger transition-colors">Cancel All</button>
+                </div>
+                <div id="uploadList" class="space-y-3">
+                    <!-- Upload items will be added here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter & Sort Bar -->
+        <div class="space-y-3 sm:space-y-0 sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-4 mb-4 sm:mb-6">
+            <!-- Filters - Scrollable on mobile -->
+            <div class="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-hide">
+                <button class="filter-btn active px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium bg-dark-700 border border-dark-500 hover:border-accent transition-all whitespace-nowrap flex-shrink-0" data-filter="all">
+                    All
+                </button>
+                <button class="filter-btn px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium bg-dark-700 border border-dark-500 hover:border-accent transition-all flex-shrink-0" data-filter="images">
+                    <span class="flex items-center gap-1.5 sm:gap-2">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        <span class="hidden xs:inline">Images</span>
+                    </span>
+                </button>
+                <button class="filter-btn px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium bg-dark-700 border border-dark-500 hover:border-accent transition-all flex-shrink-0" data-filter="documents">
+                    <span class="flex items-center gap-1.5 sm:gap-2">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <span class="hidden xs:inline">Docs</span>
+                    </span>
+                </button>
+                <button class="filter-btn px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium bg-dark-700 border border-dark-500 hover:border-accent transition-all flex-shrink-0" data-filter="text">
+                    <span class="flex items-center gap-1.5 sm:gap-2">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+                        <span class="hidden xs:inline">Text</span>
+                    </span>
+                </button>
+            </div>
+            
+            <div class="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
+                <select id="sortSelect" class="flex-1 sm:flex-none bg-dark-700 border border-dark-500 rounded-lg px-2 sm:px-3 py-2 text-xs sm:text-sm focus:outline-none focus:border-accent transition-colors">
+                    <option value="date-desc">Newest</option>
+                    <option value="date-asc">Oldest</option>
+                    <option value="name-asc">A-Z</option>
+                    <option value="name-desc">Z-A</option>
+                    <option value="size-desc">Largest</option>
+                    <option value="size-asc">Smallest</option>
+                </select>
+                
+                <div class="flex items-center bg-dark-700 rounded-lg border border-dark-500 p-1">
+                    <button id="viewGrid" class="view-btn p-1.5 sm:p-2 rounded-md bg-dark-600 text-accent" data-view="grid">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                    </button>
+                    <button id="viewList" class="view-btn p-1.5 sm:p-2 rounded-md text-gray-400 hover:text-gray-200" data-view="list">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+                    </button>
+                </div>
+                
+                <button id="selectMode" class="px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium bg-dark-700 border border-dark-500 hover:border-accent transition-all">
+                    Select
+                </button>
+            </div>
+        </div>
+
+        <!-- Batch Actions Bar (Hidden by default) -->
+        <div id="batchActions" class="mb-4 sm:mb-6 hidden animate-slide-up">
+            <div class="bg-dark-800 rounded-xl border border-accent/30 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div class="flex items-center gap-2 sm:gap-3 justify-between sm:justify-start">
+                    <span id="selectedCount" class="text-accent font-medium text-sm">0 selected</span>
+                    <div class="flex gap-2">
+                        <button id="selectAll" class="text-xs sm:text-sm text-gray-400 hover:text-white transition-colors">All</button>
+                        <button id="deselectAll" class="text-xs sm:text-sm text-gray-400 hover:text-white transition-colors">None</button>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="batchDownload" class="flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium bg-accent/20 text-accent hover:bg-accent/30 transition-colors flex items-center justify-center gap-1.5 sm:gap-2">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        <span class="hidden xs:inline">Download</span> ZIP
+                    </button>
+                    <button id="batchDelete" class="flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium bg-danger/20 text-danger hover:bg-danger/30 transition-colors flex items-center justify-center gap-1.5 sm:gap-2">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Files Grid -->
+        <div id="filesContainer" class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4">
+            <!-- Files will be loaded here -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden text-center py-16">
+            <div class="w-24 h-24 mx-auto mb-6 rounded-2xl bg-dark-700 flex items-center justify-center">
+                <svg class="w-12 h-12 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"/>
+                </svg>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-300 mb-2">No files yet</h3>
+            <p class="text-gray-500">Drop files above or click to upload</p>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="hidden">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div class="skeleton h-48 rounded-xl"></div>
+                <div class="skeleton h-48 rounded-xl"></div>
+                <div class="skeleton h-48 rounded-xl"></div>
+                <div class="skeleton h-48 rounded-xl"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- File Preview Modal -->
+    <div id="previewModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" id="previewOverlay"></div>
+        <div class="absolute inset-4 sm:inset-8 lg:inset-16 bg-dark-800 rounded-2xl border border-dark-600 overflow-hidden flex flex-col animate-fade-in">
+            <div class="flex items-center justify-between p-4 border-b border-dark-600">
+                <h3 id="previewTitle" class="font-medium text-lg truncate"></h3>
+                <div class="flex items-center gap-2">
+                    <button id="previewDownload" class="p-2 rounded-lg bg-dark-700 hover:bg-dark-600 transition-colors">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    </button>
+                    <button id="closePreview" class="p-2 rounded-lg bg-dark-700 hover:bg-dark-600 transition-colors">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div id="previewContent" class="flex-1 overflow-auto p-4 flex items-center justify-center">
+                <!-- Preview content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Rename Modal -->
+    <div id="renameModal" class="fixed inset-0 z-50 hidden flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" id="renameOverlay"></div>
+        <div class="relative bg-dark-800 rounded-2xl border border-dark-600 p-6 w-full max-w-md animate-slide-up">
+            <h3 class="text-lg font-semibold mb-4">Rename File</h3>
+            <input type="text" id="renameInput" class="w-full bg-dark-700 border border-dark-500 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-all">
+            <div class="flex justify-end gap-3 mt-6">
+                <button id="cancelRename" class="px-4 py-2 rounded-lg text-sm font-medium bg-dark-700 hover:bg-dark-600 transition-colors">Cancel</button>
+                <button id="confirmRename" class="px-4 py-2 rounded-lg text-sm font-medium bg-accent text-dark-900 hover:bg-accent-light transition-colors">Rename</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="fixed inset-0 z-50 hidden flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" id="deleteOverlay"></div>
+        <div class="relative bg-dark-800 rounded-2xl border border-dark-600 p-6 w-full max-w-md animate-slide-up">
+            <div class="flex items-center gap-4 mb-4">
+                <div class="w-12 h-12 rounded-xl bg-danger/20 flex items-center justify-center">
+                    <svg class="w-6 h-6 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold">Delete File</h3>
+                    <p id="deleteFileName" class="text-sm text-gray-400"></p>
+                </div>
+            </div>
+            <p class="text-gray-300 mb-6">Are you sure you want to delete this file? This action cannot be undone.</p>
+            <div class="flex justify-end gap-3">
+                <button id="cancelDelete" class="px-4 py-2 rounded-lg text-sm font-medium bg-dark-700 hover:bg-dark-600 transition-colors">Cancel</button>
+                <button id="confirmDelete" class="px-4 py-2 rounded-lg text-sm font-medium bg-danger text-white hover:bg-red-600 transition-colors">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Connection Modal -->
+    <div id="connectionModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" id="connectionOverlay"></div>
+        <div class="relative bg-dark-800 rounded-2xl border border-dark-600 p-5 sm:p-8 w-full max-w-md animate-slide-up max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4 sm:mb-6">
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-white flex items-center justify-center flex-shrink-0">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7" rx="1"/>
+                            <rect x="14" y="3" width="7" height="7" rx="1"/>
+                            <rect x="3" y="14" width="7" height="7" rx="1"/>
+                            <rect x="14" y="14" width="7" height="7" rx="1"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-semibold text-white">Connect Device</h3>
+                        <p class="text-[10px] sm:text-xs text-gray-500">Scan QR or enter URL</p>
+                    </div>
+                </div>
+                <button id="closeConnection" class="p-2 rounded-lg hover:bg-dark-700 transition-colors text-gray-400 hover:text-white">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            
+            <!-- QR Code -->
+            <div class="bg-white rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 flex items-center justify-center">
+                <div id="qrCode" class="w-[160px] h-[160px] sm:w-[200px] sm:h-[200px] flex items-center justify-center"></div>
+            </div>
+            
+            <!-- Connection Info -->
+            <div class="space-y-2 sm:space-y-3">
+                <div class="bg-dark-700 rounded-xl p-3 sm:p-4">
+                    <p class="text-[10px] sm:text-xs text-gray-500 mb-1">Network URL</p>
+                    <div class="flex items-center gap-2">
+                        <code id="connectionUrl" class="flex-1 text-white font-mono text-xs sm:text-sm truncate">Loading...</code>
+                        <button id="copyUrl" class="p-1.5 sm:p-2 rounded-lg bg-dark-600 hover:bg-dark-500 transition-colors flex-shrink-0" title="Copy URL">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-2 sm:gap-3">
+                    <div class="bg-dark-700 rounded-xl p-3 sm:p-4">
+                        <p class="text-[10px] sm:text-xs text-gray-500 mb-1">IP Address</p>
+                        <code id="hostIp" class="text-white font-mono text-xs sm:text-sm">---.---.---.---</code>
+                    </div>
+                    <div class="bg-dark-700 rounded-xl p-3 sm:p-4">
+                        <p class="text-[10px] sm:text-xs text-gray-500 mb-1">Port</p>
+                        <code id="hostPort" class="text-white font-mono text-xs sm:text-sm">----</code>
+                    </div>
+                </div>
+                
+                <div class="bg-dark-700 rounded-xl p-3 sm:p-4">
+                    <p class="text-[10px] sm:text-xs text-gray-500 mb-1">Hostname</p>
+                    <code id="hostname" class="text-white font-mono text-xs sm:text-sm truncate block">Loading...</code>
+                </div>
+            </div>
+            
+            <!-- Instructions -->
+            <div class="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-dark-600">
+                <p class="text-[10px] sm:text-xs text-gray-500 text-center leading-relaxed">
+                    Scan the QR code with another device on the same network, or enter the URL manually in a browser.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+
+    <script>
+        // ============== State ==============
+        let files = [];
+        let selectedFiles = new Set();
+        let currentView = 'grid';
+        let currentFilter = 'all';
+        let selectModeActive = false;
+        let currentFileId = null;
+        let uploadControllers = new Map();
+        let connectionInfo = null;
+
+        // ============== API Client ==============
+        const api = {
+            async getConnectionInfo() {
+                const response = await fetch('/api/v1/connection');
+                return response.json();
+            },
+            
+            async getFiles(params = {}) {
+                const searchParams = new URLSearchParams(params);
+                const response = await fetch(`/api/v1/files?${searchParams}`);
+                return response.json();
+            },
+            
+            async uploadFile(file, onProgress) {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const controller = new AbortController();
+                uploadControllers.set(file.name, controller);
+                
+                return new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    
+                    xhr.upload.addEventListener('progress', (e) => {
+                        if (e.lengthComputable && onProgress) {
+                            onProgress(Math.round((e.loaded / e.total) * 100));
+                        }
+                    });
+                    
+                    xhr.addEventListener('load', () => {
+                        uploadControllers.delete(file.name);
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            resolve(JSON.parse(xhr.responseText));
+                        } else {
+                            reject(JSON.parse(xhr.responseText));
+                        }
+                    });
+                    
+                    xhr.addEventListener('error', () => {
+                        uploadControllers.delete(file.name);
+                        reject({ error: 'NETWORK_ERROR', message: 'Network error occurred' });
+                    });
+                    
+                    xhr.addEventListener('abort', () => {
+                        uploadControllers.delete(file.name);
+                        reject({ error: 'CANCELLED', message: 'Upload cancelled' });
+                    });
+                    
+                    xhr.open('POST', '/api/v1/upload');
+                    xhr.send(formData);
+                });
+            },
+            
+            async deleteFile(fileId) {
+                const response = await fetch(`/api/v1/files/${fileId}`, { method: 'DELETE' });
+                if (!response.ok && response.status !== 204) {
+                    throw await response.json();
+                }
+                return true;
+            },
+            
+            async renameFile(fileId, newName) {
+                const response = await fetch(`/api/v1/files/${fileId}/rename`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: newName })
+                });
+                return response.json();
+            },
+            
+            async searchFiles(query, type = null) {
+                const params = new URLSearchParams({ query });
+                if (type) params.append('type', type);
+                const response = await fetch(`/api/v1/search?${params}`);
+                return response.json();
+            },
+            
+            async batchDownload(fileIds) {
+                const response = await fetch('/api/v1/batch/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_ids: fileIds })
+                });
+                if (!response.ok) throw await response.json();
+                return response.blob();
+            },
+            
+            async batchDelete(fileIds) {
+                const response = await fetch('/api/v1/batch/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_ids: fileIds })
+                });
+                return response.json();
+            },
+            
+            async getStats() {
+                const response = await fetch('/api/v1/stats');
+                return response.json();
+            }
+        };
+
+        // ============== UI Helpers ==============
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            const colors = {
+                success: 'bg-success/20 border-success/50 text-success',
+                error: 'bg-danger/20 border-danger/50 text-danger',
+                info: 'bg-accent/20 border-accent/50 text-accent',
+                warning: 'bg-warning/20 border-warning/50 text-warning'
+            };
+            
+            toast.className = `px-4 py-3 rounded-xl border ${colors[type]} backdrop-blur-sm animate-slide-up flex items-center gap-3`;
+            toast.innerHTML = `
+                <span>${message}</span>
+                <button class="opacity-50 hover:opacity-100 transition-opacity">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            `;
+            
+            toast.querySelector('button').addEventListener('click', () => toast.remove());
+            container.appendChild(toast);
+            
+            setTimeout(() => toast.remove(), 5000);
+        }
+
+        function getFileIcon(icon) {
+            const icons = {
+                'file-text': '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>',
+                'image': '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>',
+                'code': '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>',
+                'table': '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>',
+                'music': '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>',
+                'video': '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>',
+                'archive': '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>',
+                'file': '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>'
+            };
+            return icons[icon] || icons['file'];
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diff = now - date;
+            
+            if (diff < 60000) return 'Just now';
+            if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+            if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+            if (diff < 604800000) return `${Math.floor(diff / 86400000)}d ago`;
+            
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        // ============== File Rendering ==============
+        function renderFileCard(file) {
+            const isSelected = selectedFiles.has(file.id);
+            const isImage = file.type?.startsWith('image/');
+            
+            return `
+                <div class="file-card group bg-dark-800 rounded-lg sm:rounded-xl border border-dark-600 overflow-hidden hover:border-dark-500 transition-all duration-200 ${isSelected ? 'ring-2 ring-accent' : ''}" data-id="${file.id}">
+                    ${selectModeActive ? `
+                        <div class="absolute top-2 left-2 sm:top-3 sm:left-3 z-10">
+                            <input type="checkbox" class="file-checkbox w-4 h-4 sm:w-5 sm:h-5 rounded border-2 border-dark-500 bg-dark-700 checked:bg-accent checked:border-accent cursor-pointer" ${isSelected ? 'checked' : ''}>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="relative aspect-square sm:aspect-video bg-dark-700 flex items-center justify-center overflow-hidden">
+                        ${isImage ? `
+                            <img src="/api/v1/files/${file.id}/preview" alt="${file.filename}" class="w-full h-full object-cover" loading="lazy">
+                        ` : `
+                            <svg class="w-10 h-10 sm:w-16 sm:h-16 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                ${getFileIcon(file.icon)}
+                            </svg>
+                        `}
+                        
+                        <div class="file-actions absolute inset-0 bg-gradient-to-t from-dark-900/90 via-dark-900/50 to-transparent opacity-0 transition-opacity duration-200 flex items-end justify-center pb-2 sm:pb-4 gap-1 sm:gap-2">
+                            <button class="action-preview p-1.5 sm:p-2 rounded-lg bg-dark-700/80 hover:bg-dark-600 transition-colors" title="Preview">
+                                <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                            </button>
+                            <a href="/api/v1/files/${file.id}/download" class="action-download p-1.5 sm:p-2 rounded-lg bg-dark-700/80 hover:bg-dark-600 transition-colors" title="Download" download>
+                                <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            </a>
+                            <button class="action-rename p-1.5 sm:p-2 rounded-lg bg-dark-700/80 hover:bg-dark-600 transition-colors hidden sm:block" title="Rename">
+                                <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                            </button>
+                            <button class="action-delete p-1.5 sm:p-2 rounded-lg bg-dark-700/80 hover:bg-danger/50 transition-colors" title="Delete">
+                                <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="p-2 sm:p-4">
+                        <h4 class="font-medium text-xs sm:text-sm truncate mb-0.5 sm:mb-1" title="${file.filename}">${file.filename}</h4>
+                        <div class="flex items-center justify-between text-[10px] sm:text-xs text-gray-500">
+                            <span class="font-mono">${file.size_formatted}</span>
+                            <span class="hidden xs:inline">${formatDate(file.upload_date)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderFileList(file) {
+            const isSelected = selectedFiles.has(file.id);
+            
+            return `
+                <div class="file-card group bg-dark-800 rounded-xl border border-dark-600 overflow-hidden hover:border-dark-500 transition-all duration-200 ${isSelected ? 'ring-2 ring-accent' : ''}" data-id="${file.id}">
+                    <div class="flex items-center gap-4 p-4">
+                        ${selectModeActive ? `
+                            <input type="checkbox" class="file-checkbox w-5 h-5 rounded border-2 border-dark-500 bg-dark-700 checked:bg-accent checked:border-accent cursor-pointer" ${isSelected ? 'checked' : ''}>
+                        ` : ''}
+                        
+                        <div class="w-12 h-12 rounded-lg bg-dark-700 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-6 h-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                ${getFileIcon(file.icon)}
+                            </svg>
+                        </div>
+                        
+                        <div class="flex-1 min-w-0">
+                            <h4 class="font-medium text-sm truncate" title="${file.filename}">${file.filename}</h4>
+                            <div class="flex items-center gap-4 text-xs text-gray-500 mt-1">
+                                <span class="font-mono">${file.size_formatted}</span>
+                                <span>${formatDate(file.upload_date)}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button class="action-preview p-2 rounded-lg hover:bg-dark-600 transition-colors" title="Preview">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                            </button>
+                            <a href="/api/v1/files/${file.id}/download" class="action-download p-2 rounded-lg hover:bg-dark-600 transition-colors" title="Download" download>
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            </a>
+                            <button class="action-rename p-2 rounded-lg hover:bg-dark-600 transition-colors" title="Rename">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                            </button>
+                            <button class="action-delete p-2 rounded-lg hover:bg-danger/50 transition-colors" title="Delete">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderFiles() {
+            const container = document.getElementById('filesContainer');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (files.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            
+            emptyState.classList.add('hidden');
+            
+            if (currentView === 'grid') {
+                container.className = 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4';
+                container.innerHTML = files.map(renderFileCard).join('');
+            } else {
+                container.className = 'space-y-2';
+                container.innerHTML = files.map(renderFileList).join('');
+            }
+            
+            attachFileActions();
+        }
+
+        function attachFileActions() {
+            document.querySelectorAll('.file-card').forEach(card => {
+                const fileId = card.dataset.id;
+                const file = files.find(f => f.id === fileId);
+                
+                card.querySelector('.action-preview')?.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openPreview(file);
+                });
+                
+                card.querySelector('.action-rename')?.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openRenameModal(file);
+                });
+                
+                card.querySelector('.action-delete')?.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openDeleteModal(file);
+                });
+                
+                card.querySelector('.file-checkbox')?.addEventListener('change', (e) => {
+                    e.stopPropagation();
+                    if (e.target.checked) {
+                        selectedFiles.add(fileId);
+                    } else {
+                        selectedFiles.delete(fileId);
+                    }
+                    updateSelectedCount();
+                    renderFiles();
+                });
+                
+                if (selectModeActive) {
+                    card.addEventListener('click', () => {
+                        if (selectedFiles.has(fileId)) {
+                            selectedFiles.delete(fileId);
+                        } else {
+                            selectedFiles.add(fileId);
+                        }
+                        updateSelectedCount();
+                        renderFiles();
+                    });
+                }
+            });
+        }
+
+        // ============== Upload Handling ==============
+        function createUploadItem(file) {
+            const uploadList = document.getElementById('uploadList');
+            const uploadProgress = document.getElementById('uploadProgress');
+            
+            uploadProgress.classList.remove('hidden');
+            
+            const item = document.createElement('div');
+            item.className = 'upload-item flex items-center gap-4 p-3 bg-dark-700 rounded-lg';
+            item.id = `upload-${file.name.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            item.innerHTML = `
+                <div class="relative w-10 h-10">
+                    <svg class="upload-progress-ring w-10 h-10" viewBox="0 0 36 36">
+                        <circle cx="18" cy="18" r="16" fill="none" stroke="#24242f" stroke-width="3"/>
+                        <circle class="progress-circle" cx="18" cy="18" r="16" fill="none" stroke="#06b6d4" stroke-width="3" 
+                            stroke-dasharray="100" stroke-dashoffset="100" stroke-linecap="round"/>
+                    </svg>
+                    <span class="progress-text absolute inset-0 flex items-center justify-center text-xs font-mono">0%</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium truncate">${file.name}</p>
+                    <p class="text-xs text-gray-500">${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                </div>
+                <button class="cancel-upload p-2 rounded-lg hover:bg-dark-600 transition-colors text-gray-400 hover:text-danger">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            `;
+            
+            uploadList.appendChild(item);
+            return item;
+        }
+
+        function updateUploadProgress(item, progress) {
+            const circle = item.querySelector('.progress-circle');
+            const text = item.querySelector('.progress-text');
+            const circumference = 100;
+            const offset = circumference - (progress / 100) * circumference;
+            
+            circle.style.strokeDashoffset = offset;
+            text.textContent = `${progress}%`;
+        }
+
+        function removeUploadItem(item) {
+            item.remove();
+            const uploadList = document.getElementById('uploadList');
+            if (uploadList.children.length === 0) {
+                document.getElementById('uploadProgress').classList.add('hidden');
+            }
+        }
+
+        async function handleFileUpload(fileList) {
+            for (const file of fileList) {
+                const item = createUploadItem(file);
+                
+                const cancelBtn = item.querySelector('.cancel-upload');
+                cancelBtn.addEventListener('click', () => {
+                    const controller = uploadControllers.get(file.name);
+                    if (controller) controller.abort();
+                    removeUploadItem(item);
+                    showToast(`Upload cancelled: ${file.name}`, 'warning');
+                });
+                
+                try {
+                    await api.uploadFile(file, (progress) => {
+                        updateUploadProgress(item, progress);
+                    });
+                    
+                    removeUploadItem(item);
+                    showToast(`Uploaded: ${file.name}`, 'success');
+                    loadFiles();
+                } catch (error) {
+                    if (error.error !== 'CANCELLED') {
+                        removeUploadItem(item);
+                        showToast(`Failed to upload ${file.name}: ${error.message}`, 'error');
+                    }
+                }
+            }
+        }
+
+        // ============== Modals ==============
+        function openPreview(file) {
+            const modal = document.getElementById('previewModal');
+            const title = document.getElementById('previewTitle');
+            const content = document.getElementById('previewContent');
+            const downloadBtn = document.getElementById('previewDownload');
+            
+            title.textContent = file.filename;
+            downloadBtn.onclick = () => window.location.href = `/api/v1/files/${file.id}/download`;
+            
+            if (file.type?.startsWith('image/')) {
+                content.innerHTML = `<img src="/api/v1/files/${file.id}/preview" alt="${file.filename}" class="max-w-full max-h-full object-contain rounded-lg">`;
+            } else if (file.type === 'application/pdf') {
+                content.innerHTML = `<iframe src="/api/v1/files/${file.id}/preview" class="w-full h-full rounded-lg"></iframe>`;
+            } else if (file.type?.startsWith('text/') || file.type === 'application/json') {
+                fetch(`/api/v1/files/${file.id}/preview`)
+                    .then(r => r.json())
+                    .then(data => {
+                        content.innerHTML = `<pre class="w-full h-full overflow-auto bg-dark-900 p-4 rounded-lg text-sm font-mono text-gray-300">${escapeHtml(data.content)}</pre>`;
+                    })
+                    .catch(() => {
+                        content.innerHTML = `<p class="text-gray-400">Unable to preview this file</p>`;
+                    });
+            } else {
+                content.innerHTML = `
+                    <div class="text-center">
+                        <svg class="w-24 h-24 mx-auto text-gray-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            ${getFileIcon(file.icon)}
+                        </svg>
+                        <p class="text-gray-400">Preview not available for this file type</p>
+                        <a href="/api/v1/files/${file.id}/download" class="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-accent text-dark-900 rounded-lg font-medium hover:bg-accent-light transition-colors">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            Download File
+                        </a>
+                    </div>
+                `;
+            }
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closePreview() {
+            document.getElementById('previewModal').classList.add('hidden');
+        }
+
+        function openRenameModal(file) {
+            currentFileId = file.id;
+            const modal = document.getElementById('renameModal');
+            const input = document.getElementById('renameInput');
+            input.value = file.filename;
+            modal.classList.remove('hidden');
+            input.focus();
+            input.select();
+        }
+
+        function closeRenameModal() {
+            document.getElementById('renameModal').classList.add('hidden');
+            currentFileId = null;
+        }
+
+        async function confirmRename() {
+            const input = document.getElementById('renameInput');
+            const newName = input.value.trim();
+            
+            if (!newName || !currentFileId) return;
+            
+            try {
+                await api.renameFile(currentFileId, newName);
+                showToast('File renamed successfully', 'success');
+                closeRenameModal();
+                loadFiles();
+            } catch (error) {
+                showToast(`Failed to rename: ${error.message}`, 'error');
+            }
+        }
+
+        function openDeleteModal(file) {
+            currentFileId = file.id;
+            const modal = document.getElementById('deleteModal');
+            document.getElementById('deleteFileName').textContent = file.filename;
+            modal.classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.add('hidden');
+            currentFileId = null;
+        }
+
+        async function confirmDelete() {
+            if (!currentFileId) return;
+            
+            try {
+                await api.deleteFile(currentFileId);
+                showToast('File deleted', 'success');
+                closeDeleteModal();
+                loadFiles();
+            } catch (error) {
+                showToast(`Failed to delete: ${error.message}`, 'error');
+            }
+        }
+
+        // ============== Batch Operations ==============
+        function updateSelectedCount() {
+            document.getElementById('selectedCount').textContent = `${selectedFiles.size} selected`;
+        }
+
+        async function batchDownload() {
+            if (selectedFiles.size === 0) return;
+            
+            try {
+                showToast('Preparing download...', 'info');
+                const blob = await api.batchDownload(Array.from(selectedFiles));
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `files_${Date.now()}.zip`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('Download started', 'success');
+            } catch (error) {
+                showToast(`Download failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function batchDelete() {
+            if (selectedFiles.size === 0) return;
+            
+            if (!confirm(`Delete ${selectedFiles.size} files? This cannot be undone.`)) return;
+            
+            try {
+                const result = await api.batchDelete(Array.from(selectedFiles));
+                showToast(`Deleted ${result.total_deleted} files`, 'success');
+                selectedFiles.clear();
+                updateSelectedCount();
+                loadFiles();
+            } catch (error) {
+                showToast(`Delete failed: ${error.message}`, 'error');
+            }
+        }
+
+        // ============== Data Loading ==============
+        async function loadFiles() {
+            const loadingState = document.getElementById('loadingState');
+            const filesContainer = document.getElementById('filesContainer');
+            
+            loadingState.classList.remove('hidden');
+            filesContainer.classList.add('hidden');
+            
+            try {
+                const sortValue = document.getElementById('sortSelect').value;
+                const [sort, order] = sortValue.split('-');
+                
+                const params = { sort, order };
+                if (currentFilter !== 'all') {
+                    params.type = currentFilter;
+                }
+                
+                const data = await api.getFiles(params);
+                files = data.files;
+                
+                loadingState.classList.add('hidden');
+                filesContainer.classList.remove('hidden');
+                renderFiles();
+            } catch (error) {
+                loadingState.classList.add('hidden');
+                filesContainer.classList.remove('hidden');
+                showToast('Failed to load files', 'error');
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const stats = await api.getStats();
+                document.getElementById('totalFiles').textContent = stats.total_files;
+                document.getElementById('storageUsed').textContent = stats.total_size_formatted;
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+
+        async function searchFiles(query) {
+            if (!query) {
+                loadFiles();
+                return;
+            }
+            
+            try {
+                const data = await api.searchFiles(query, currentFilter !== 'all' ? currentFilter : null);
+                files = data.results;
+                renderFiles();
+            } catch (error) {
+                showToast('Search failed', 'error');
+            }
+        }
+
+        // ============== Utility Functions ==============
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
+        // ============== Event Listeners ==============
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initial load
+            loadFiles();
+            loadStats();
+            
+            // Drag and drop
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            
+            dropZone.addEventListener('click', () => fileInput.click());
+            
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('drop-zone-active');
+            });
+            
+            dropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drop-zone-active');
+            });
+            
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drop-zone-active');
+                handleFileUpload(e.dataTransfer.files);
+            });
+            
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files.length > 0) {
+                    handleFileUpload(fileInput.files);
+                    fileInput.value = '';
+                }
+            });
+            
+            // Global drag and drop
+            document.addEventListener('dragover', (e) => e.preventDefault());
+            document.addEventListener('drop', (e) => {
+                e.preventDefault();
+                if (e.dataTransfer.files.length > 0) {
+                    handleFileUpload(e.dataTransfer.files);
+                }
+            });
+            
+            // Search
+            const searchInput = document.getElementById('searchInput');
+            const searchInputMobile = document.getElementById('searchInputMobile');
+            const debouncedSearch = debounce((query) => searchFiles(query), 300);
+            
+            // Sync both search inputs
+            const handleSearch = (e) => {
+                const query = e.target.value;
+                debouncedSearch(query);
+                // Sync the other input
+                if (e.target === searchInput && searchInputMobile) {
+                    searchInputMobile.value = query;
+                } else if (e.target === searchInputMobile && searchInput) {
+                    searchInput.value = query;
+                }
+            };
+            
+            searchInput?.addEventListener('input', handleSearch);
+            searchInputMobile?.addEventListener('input', handleSearch);
+            
+            // Filters
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active', 'border-accent', 'text-accent'));
+                    btn.classList.add('active', 'border-accent', 'text-accent');
+                    currentFilter = btn.dataset.filter;
+                    loadFiles();
+                });
+            });
+            
+            // Sort
+            document.getElementById('sortSelect').addEventListener('change', loadFiles);
+            
+            // View toggle
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.view-btn').forEach(b => {
+                        b.classList.remove('bg-dark-600', 'text-accent');
+                        b.classList.add('text-gray-400');
+                    });
+                    btn.classList.remove('text-gray-400');
+                    btn.classList.add('bg-dark-600', 'text-accent');
+                    currentView = btn.dataset.view;
+                    renderFiles();
+                });
+            });
+            
+            // Select mode
+            document.getElementById('selectMode').addEventListener('click', () => {
+                selectModeActive = !selectModeActive;
+                const btn = document.getElementById('selectMode');
+                const batchActions = document.getElementById('batchActions');
+                
+                if (selectModeActive) {
+                    btn.classList.add('bg-accent', 'text-dark-900');
+                    btn.textContent = 'Done';
+                    batchActions.classList.remove('hidden');
+                } else {
+                    btn.classList.remove('bg-accent', 'text-dark-900');
+                    btn.textContent = 'Select';
+                    batchActions.classList.add('hidden');
+                    selectedFiles.clear();
+                }
+                renderFiles();
+            });
+            
+            // Batch actions
+            document.getElementById('selectAll').addEventListener('click', () => {
+                files.forEach(f => selectedFiles.add(f.id));
+                updateSelectedCount();
+                renderFiles();
+            });
+            
+            document.getElementById('deselectAll').addEventListener('click', () => {
+                selectedFiles.clear();
+                updateSelectedCount();
+                renderFiles();
+            });
+            
+            document.getElementById('batchDownload').addEventListener('click', batchDownload);
+            document.getElementById('batchDelete').addEventListener('click', batchDelete);
+            
+            // Cancel all uploads
+            document.getElementById('cancelAllUploads').addEventListener('click', () => {
+                uploadControllers.forEach(controller => controller.abort());
+                document.getElementById('uploadList').innerHTML = '';
+                document.getElementById('uploadProgress').classList.add('hidden');
+                showToast('All uploads cancelled', 'warning');
+            });
+            
+            // Preview modal
+            document.getElementById('closePreview').addEventListener('click', closePreview);
+            document.getElementById('previewOverlay').addEventListener('click', closePreview);
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closePreview();
+                    closeRenameModal();
+                    closeDeleteModal();
+                    closeConnectionModal();
+                }
+            });
+            
+            // Rename modal
+            document.getElementById('cancelRename').addEventListener('click', closeRenameModal);
+            document.getElementById('confirmRename').addEventListener('click', confirmRename);
+            document.getElementById('renameOverlay').addEventListener('click', closeRenameModal);
+            document.getElementById('renameInput').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') confirmRename();
+            });
+            
+            // Delete modal
+            document.getElementById('cancelDelete').addEventListener('click', closeDeleteModal);
+            document.getElementById('confirmDelete').addEventListener('click', confirmDelete);
+            document.getElementById('deleteOverlay').addEventListener('click', closeDeleteModal);
+            
+            // Connection modal
+            document.getElementById('connectBtn').addEventListener('click', openConnectionModal);
+            document.getElementById('closeConnection').addEventListener('click', closeConnectionModal);
+            document.getElementById('connectionOverlay').addEventListener('click', closeConnectionModal);
+            document.getElementById('copyUrl').addEventListener('click', copyConnectionUrl);
+            
+            // Load connection info on startup
+            loadConnectionInfo();
+            
+            // Refresh stats periodically
+            setInterval(loadStats, 30000);
+        });
+        
+        // ============== Connection Modal ==============
+        async function loadConnectionInfo() {
+            try {
+                connectionInfo = await api.getConnectionInfo();
+                updateConnectionDisplay();
+            } catch (error) {
+                console.error('Failed to load connection info:', error);
+            }
+        }
+        
+        function updateConnectionDisplay() {
+            if (!connectionInfo) return;
+            
+            document.getElementById('connectionUrl').textContent = connectionInfo.url;
+            document.getElementById('hostIp').textContent = connectionInfo.ip;
+            document.getElementById('hostPort').textContent = connectionInfo.port;
+            document.getElementById('hostname').textContent = connectionInfo.hostname;
+        }
+        
+        let qrCodeInstance = null;
+        
+        async function openConnectionModal() {
+            const modal = document.getElementById('connectionModal');
+            modal.classList.remove('hidden');
+            
+            // Refresh connection info each time modal opens
+            await loadConnectionInfo();
+            
+            // Generate QR code
+            if (connectionInfo && typeof QRCode !== 'undefined') {
+                const qrContainer = document.getElementById('qrCode');
+                
+                // Clear previous QR code
+                qrContainer.innerHTML = '';
+                
+                // Responsive QR code size
+                const isMobile = window.innerWidth < 640;
+                const qrSize = isMobile ? 150 : 180;
+                
+                try {
+                    qrCodeInstance = new QRCode(qrContainer, {
+                        text: connectionInfo.url,
+                        width: qrSize,
+                        height: qrSize,
+                        colorDark: '#000000',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                } catch (err) {
+                    console.error('QR Code generation failed:', err);
+                    qrContainer.innerHTML = '<p class="text-gray-500 text-sm">Failed to generate QR</p>';
+                }
+            }
+        }
+        
+        function closeConnectionModal() {
+            document.getElementById('connectionModal').classList.add('hidden');
+        }
+        
+        async function copyConnectionUrl() {
+            if (!connectionInfo) return;
+            
+            try {
+                await navigator.clipboard.writeText(connectionInfo.url);
+                showToast('URL copied to clipboard!', 'success');
+            } catch (err) {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = connectionInfo.url;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showToast('URL copied to clipboard!', 'success');
+            }
+        }
+    </script>
+</body>
+</html>
+
