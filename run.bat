@@ -91,18 +91,51 @@ if "%MODE%"=="python" (
 
 REM Auto-detect mode
 echo.
-echo %BOLD%^> Detecting best runtime environment...%NC%
+echo %BOLD%^> Detecting available runtime environments...%NC%
+
+set HAS_DOCKER=0
+set HAS_PYTHON=0
 
 call :check_docker
 if !errorlevel!==0 (
-    echo %BLUE%[INFO]%NC% Docker detected - using containerized deployment
-    call :run_docker
-    goto :eof
+    set HAS_DOCKER=1
+    echo %BLUE%[INFO]%NC% Docker is available
 )
 
 call :check_python
 if !errorlevel!==0 (
-    echo %BLUE%[INFO]%NC% Python detected - using native deployment
+    set HAS_PYTHON=1
+    echo %BLUE%[INFO]%NC% Python 3.9+ is available
+)
+
+if %HAS_DOCKER%==1 if %HAS_PYTHON%==1 (
+    REM Both are available - let user choose
+    echo.
+    echo %BOLD%Both Docker and Python are available. Choose your preferred method:%NC%
+    echo.
+    echo   1^) Docker  - Containerized deployment ^(recommended for production^)
+    echo   2^) Python  - Native deployment ^(faster startup, easier debugging^)
+    echo.
+    set /p CHOICE="Enter choice [1/2] (default: 1): "
+    
+    if "!CHOICE!"=="2" (
+        echo %BLUE%[INFO]%NC% Using native Python deployment
+        call :run_python
+    ) else (
+        echo %BLUE%[INFO]%NC% Using Docker containerized deployment
+        call :run_docker
+    )
+    goto :eof
+)
+
+if %HAS_DOCKER%==1 (
+    echo %BLUE%[INFO]%NC% Using Docker containerized deployment
+    call :run_docker
+    goto :eof
+)
+
+if %HAS_PYTHON%==1 (
+    echo %BLUE%[INFO]%NC% Using native Python deployment
     call :run_python
     goto :eof
 )
@@ -201,6 +234,9 @@ if errorlevel 1 (
     echo %BLUE%[INFO]%NC% To rebuild, run: docker build -t fileshare:latest .
 )
 
+REM Get host IP to pass to container
+call :get_local_ip
+
 REM Run container
 echo %BLUE%[INFO]%NC% Starting container...
 docker run -d ^
@@ -209,6 +245,7 @@ docker run -d ^
     -v "%SCRIPT_DIR%uploads:/app/uploads" ^
     -e SERVER_PORT=8000 ^
     -e MAX_FILE_SIZE=536870912 ^
+    -e HOST_IP=%LOCAL_IP% ^
     --restart unless-stopped ^
     fileshare:latest
 

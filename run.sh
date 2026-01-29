@@ -133,6 +133,9 @@ run_docker() {
         print_status "To rebuild, run: docker build -t fileshare:latest ."
     fi
     
+    # Get host IP to pass to container
+    local host_ip=$(get_local_ip)
+    
     # Run container
     print_status "Starting container..."
     docker run -d \
@@ -141,6 +144,7 @@ run_docker() {
         -v "$SCRIPT_DIR/uploads:/app/uploads" \
         -e SERVER_PORT=8000 \
         -e MAX_FILE_SIZE=536870912 \
+        -e HOST_IP="$host_ip" \
         --restart unless-stopped \
         fileshare:latest
     
@@ -322,13 +326,46 @@ elif [ "$MODE" = "python" ]; then
     fi
 else
     # Auto-detect mode
-    print_step "Detecting best runtime environment..."
+    print_step "Detecting available runtime environments..."
+    
+    has_docker=false
+    has_python=false
     
     if check_docker; then
-        print_status "Docker detected - using containerized deployment"
+        has_docker=true
+        print_status "Docker is available"
+    fi
+    
+    if check_python; then
+        has_python=true
+        print_status "Python 3.9+ is available"
+    fi
+    
+    if $has_docker && $has_python; then
+        # Both are available - let user choose
+        echo ""
+        echo -e "${BOLD}Both Docker and Python are available. Choose your preferred method:${NC}"
+        echo ""
+        echo "  1) Docker  - Containerized deployment (recommended for production)"
+        echo "  2) Python  - Native deployment (faster startup, easier debugging)"
+        echo ""
+        read -p "Enter choice [1/2] (default: 1): " choice
+        
+        case $choice in
+            2)
+                print_status "Using native Python deployment"
+                run_python
+                ;;
+            *)
+                print_status "Using Docker containerized deployment"
+                run_docker
+                ;;
+        esac
+    elif $has_docker; then
+        print_status "Using Docker containerized deployment"
         run_docker
-    elif check_python; then
-        print_status "Python detected - using native deployment"
+    elif $has_python; then
+        print_status "Using native Python deployment"
         run_python
     else
         print_error "Neither Docker nor Python 3.9+ found!"

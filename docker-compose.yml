@@ -19,6 +19,7 @@ services:
       - UPLOAD_DIR=/app/uploads
       - MAX_FILE_SIZE=${MAX_FILE_SIZE:-536870912}
       - ALLOWED_EXTENSIONS=${ALLOWED_EXTENSIONS:-pdf,png,jpg,jpeg,gif,txt,md,json,csv,doc,docx,xlsx,xls,ppt,pptx,zip,tar,gz,mp3,mp4,wav,avi,mov}
+      - HOST_IP=${HOST_IP:-}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]

@@ -127,6 +127,11 @@ def index():
 
 def get_local_ip():
     """Get the local IP address of the host machine."""
+    # Check for HOST_IP environment variable (used in Docker deployments)
+    host_ip = os.environ.get('HOST_IP')
+    if host_ip:
+        return host_ip
+    
     try:
         # Create a socket to determine the local IP
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
