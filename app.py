@@ -21,6 +21,18 @@ from flask import (
 )
 from werkzeug.utils import secure_filename
 
+try:
+    from PIL import Image
+    PILLOW_AVAILABLE = True
+except ImportError:
+    PILLOW_AVAILABLE = False
+
+try:
+    from PyPDF2 import PdfReader, PdfWriter
+    PYPDF2_AVAILABLE = True
+except ImportError:
+    PYPDF2_AVAILABLE = False
+
 # Initialize Flask app
 app = Flask(__name__)
 
@@ -37,6 +49,33 @@ Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 
 # In-memory file metadata store (in production, use SQLite or similar)
 METADATA_FILE = os.path.join(UPLOAD_DIR, '.metadata.json')
+SETTINGS_FILE = os.path.join(UPLOAD_DIR, '.settings.json')
+
+# Default settings
+DEFAULT_SETTINGS = {
+    'upload_dir': UPLOAD_DIR,
+    'download_dir': '',
+    'theme': 'dark',
+    'max_file_size': MAX_FILE_SIZE
+}
+
+
+def load_settings():
+    """Load application settings from disk."""
+    if os.path.exists(SETTINGS_FILE):
+        try:
+            with open(SETTINGS_FILE, 'r') as f:
+                settings = json.load(f)
+                return {**DEFAULT_SETTINGS, **settings}
+        except (json.JSONDecodeError, IOError):
+            return DEFAULT_SETTINGS.copy()
+    return DEFAULT_SETTINGS.copy()
+
+
+def save_settings(settings):
+    """Save application settings to disk."""
+    with open(SETTINGS_FILE, 'w') as f:
+        json.dump(settings, f, indent=2)
 
 
 def load_metadata():
@@ -304,6 +343,7 @@ def list_files():
                          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                          'text/plain', 'text/markdown'],
             'text': ['text/plain', 'text/markdown', 'application/json', 'text/csv'],
+            'videos': ['video/mp4', 'video/avi', 'video/mov', 'video/webm', 'video/mkv', 'video/quicktime'],
             'media': ['audio/mpeg', 'audio/wav', 'video/mp4', 'video/avi']
         }
         allowed_types = type_map.get(file_type, [])
@@ -507,6 +547,7 @@ def search_files():
             'images': ['image/'],
             'documents': ['application/pdf', 'application/msword', 'text/'],
             'text': ['text/'],
+            'videos': ['video/'],
         }
         prefixes = type_map.get(file_type, [])
         if prefixes:
@@ -678,6 +719,126 @@ def get_stats():
         'total_folders': len(metadata.get('folders', [])),
         'type_breakdown': type_counts,
         'disk_space': get_disk_usage()
+    })
+
+
+@app.route('/api/v1/settings', methods=['GET'])
+def get_settings():
+    """Get application settings."""
+    settings = load_settings()
+    return jsonify(settings)
+
+
+@app.route('/api/v1/settings', methods=['PUT'])
+def update_settings():
+    """Update application settings."""
+    data = request.get_json()
+    settings = load_settings()
+    
+    if 'upload_dir' in data:
+        new_upload_dir = data['upload_dir']
+        if new_upload_dir and os.path.isabs(new_upload_dir):
+            Path(new_upload_dir).mkdir(parents=True, exist_ok=True)
+            settings['upload_dir'] = new_upload_dir
+    
+    if 'download_dir' in data:
+        settings['download_dir'] = data['download_dir']
+    
+    if 'theme' in data and data['theme'] in ['dark', 'light']:
+        settings['theme'] = data['theme']
+    
+    save_settings(settings)
+    return jsonify(settings)
+
+
+@app.route('/api/v1/files/<file_id>/download/compressed', methods=['GET'])
+def download_compressed_file(file_id):
+    """Download a file with optional compression."""
+    metadata = load_metadata()
+    
+    if file_id not in metadata.get('files', {}):
+        return jsonify({'error': 'NOT_FOUND', 'message': 'File not found'}), 404
+    
+    file_info = metadata['files'][file_id]
+    file_path = file_info['file_path']
+    
+    if not os.path.exists(file_path):
+        return jsonify({'error': 'NOT_FOUND', 'message': 'File not found on disk'}), 404
+    
+    quality = request.args.get('quality', 80, type=int)
+    quality = max(10, min(100, quality))
+    
+    mime_type = file_info.get('type', '')
+    filename = file_info['filename']
+    
+    if mime_type.startswith('image/') and PILLOW_AVAILABLE:
+        try:
+            img = Image.open(file_path)
+            output = BytesIO()
+            
+            if mime_type == 'image/png':
+                if img.mode in ('RGBA', 'LA', 'P'):
+                    img = img.convert('RGBA')
+                else:
+                    img = img.convert('RGB')
+                compress_level = int((100 - quality) / 10)
+                img.save(output, format='PNG', optimize=True, compress_level=compress_level)
+            elif mime_type in ('image/jpeg', 'image/jpg'):
+                if img.mode in ('RGBA', 'LA', 'P'):
+                    img = img.convert('RGB')
+                img.save(output, format='JPEG', quality=quality, optimize=True)
+            elif mime_type == 'image/gif':
+                img.save(output, format='GIF', optimize=True)
+            else:
+                if img.mode in ('RGBA', 'LA', 'P'):
+                    img = img.convert('RGB')
+                img.save(output, format='JPEG', quality=quality, optimize=True)
+                filename = os.path.splitext(filename)[0] + '.jpg'
+            
+            output.seek(0)
+            return send_file(
+                output,
+                mimetype=mime_type,
+                as_attachment=True,
+                download_name=filename
+            )
+        except Exception as e:
+            return send_file(file_path, as_attachment=True, download_name=filename)
+    
+    elif mime_type == 'application/pdf' and PYPDF2_AVAILABLE:
+        try:
+            reader = PdfReader(file_path)
+            writer = PdfWriter()
+            
+            for page in reader.pages:
+                writer.add_page(page)
+            
+            output = BytesIO()
+            writer.write(output)
+            output.seek(0)
+            
+            return send_file(
+                output,
+                mimetype='application/pdf',
+                as_attachment=True,
+                download_name=filename
+            )
+        except Exception as e:
+            return send_file(file_path, as_attachment=True, download_name=filename)
+    
+    return send_file(file_path, as_attachment=True, download_name=filename)
+
+
+@app.route('/api/v1/compression/support', methods=['GET'])
+def get_compression_support():
+    """Get information about supported compression formats."""
+    return jsonify({
+        'image_compression': PILLOW_AVAILABLE,
+        'pdf_compression': PYPDF2_AVAILABLE,
+        'supported_formats': {
+            'images': ['png', 'jpg', 'jpeg', 'gif'] if PILLOW_AVAILABLE else [],
+            'documents': ['pdf'] if PYPDF2_AVAILABLE else []
+        }
     })
 
 

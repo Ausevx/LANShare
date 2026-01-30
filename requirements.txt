@@ -9,3 +9,9 @@ gunicorn>=21.0.0
 # Additional utilities
 python-dotenv>=1.0.0
 
+# Image processing for compression
+Pillow>=10.0.0
+
+# PDF processing for compression  
+PyPDF2>=3.0.0
+

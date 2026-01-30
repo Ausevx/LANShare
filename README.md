@@ -11,10 +11,13 @@ A lightweight, self-hosted file-sharing solution for local networks. Share files
 
 - **Drag & Drop Upload** - Simply drag files onto the page to upload
 - **Real-time Progress** - Visual upload progress with cancel support
-- **Modern Dark UI** - Sleek, modern interface built with TailwindCSS
+- **Dark/Light Theme** - Toggle between dark and light modes
 - **File Preview** - Preview images, PDFs, and text files directly in browser
+- **File Compression** - Compress images and PDFs on download with adjustable quality
 - **Batch Operations** - Download multiple files as ZIP or delete in batch
-- **Search & Filter** - Find files quickly with search and type filters
+- **Search & Filter** - Find files by name, filter by type (Images, Docs, Videos, etc.)
+- **Settings Menu** - Configure upload/download directories with folder browser
+- **QR Code Sharing** - Scan QR code to connect from mobile devices
 - **LAN Only** - Files stay within your local network for privacy
 - **Zero Configuration** - Single command deployment
 
@@ -107,6 +110,9 @@ Environment variables can be set to customize the platform:
 | `POST` | `/api/v1/batch/download` | Batch download as ZIP |
 | `POST` | `/api/v1/batch/delete` | Batch delete |
 | `GET` | `/api/v1/stats` | Platform statistics |
+| `GET/PUT` | `/api/v1/settings` | Get/update settings |
+| `GET` | `/api/v1/files/{id}/download/compressed` | Download with compression |
+| `GET` | `/api/v1/browse` | Browse server directories |
 
 ## Supported File Types
 

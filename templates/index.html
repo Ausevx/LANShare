@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -130,9 +130,50 @@
                 background: linear-gradient(to top, rgba(10, 10, 15, 0.95), transparent) !important;
             }
         }
+        
+        /* Light mode styles */
+        .light {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-tertiary: #f1f5f9;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+        }
+        .light body,
+        html.light body {
+            background-color: #f8fafc !important;
+            color: #1e293b !important;
+        }
+        html.light .bg-dark-900 { background-color: #f8fafc !important; }
+        html.light .bg-dark-800 { background-color: #ffffff !important; }
+        html.light .bg-dark-700 { background-color: #f1f5f9 !important; }
+        html.light .bg-dark-600 { background-color: #e2e8f0 !important; }
+        html.light .bg-dark-800\/80 { background-color: rgba(255, 255, 255, 0.9) !important; }
+        html.light .border-dark-600 { border-color: #e2e8f0 !important; }
+        html.light .border-dark-500 { border-color: #cbd5e1 !important; }
+        html.light .text-gray-100 { color: #1e293b !important; }
+        html.light .text-gray-200 { color: #334155 !important; }
+        html.light .text-gray-300 { color: #475569 !important; }
+        html.light .text-gray-400 { color: #64748b !important; }
+        html.light .text-gray-500 { color: #94a3b8 !important; }
+        html.light .text-gray-600 { color: #64748b !important; }
+        html.light .text-white { color: #1e293b !important; }
+        html.light .gradient-border-inner { background: #ffffff !important; }
+        html.light .skeleton {
+            background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%) !important;
+        }
+        html.light *::-webkit-scrollbar-track { background: #f1f5f9; }
+        html.light *::-webkit-scrollbar-thumb { background: #cbd5e1; }
+        html.light *::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        html.light input, html.light select {
+            background-color: #f1f5f9 !important;
+            color: #1e293b !important;
+        }
+        html.light input::placeholder { color: #94a3b8 !important; }
     </style>
 </head>
-<body class="bg-dark-900 text-gray-100 min-h-screen font-sans antialiased">
+<body class="bg-dark-900 text-gray-100 min-h-screen font-sans antialiased dark">
     <!-- Header -->
     <header class="fixed top-0 left-0 right-0 z-50 bg-dark-800/80 backdrop-blur-xl border-b border-dark-600">
         <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
@@ -176,6 +217,13 @@
                         <p id="storageUsed" class="text-lg font-semibold text-gray-300 font-mono">0 B</p>
                     </div>
                     <div class="w-px h-8 bg-dark-600 hidden lg:block"></div>
+                    <!-- Settings Button -->
+                    <button id="settingsBtn" class="p-2 rounded-lg bg-dark-700 hover:bg-dark-600 transition-colors text-gray-400 hover:text-white" title="Settings">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                    </button>
                     <!-- Connect Button -->
                     <button id="connectBtn" class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-white text-black rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm">
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -256,10 +304,16 @@
                         <span class="hidden xs:inline">Docs</span>
                     </span>
                 </button>
-                <button class="filter-btn px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium bg-dark-700 border border-dark-500 hover:border-accent transition-all flex-shrink-0" data-filter="text">
+                <button class="filter-btn px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium bg-dark-700 dark:bg-dark-700 border border-dark-500 dark:border-dark-500 hover:border-accent transition-all flex-shrink-0" data-filter="text">
                     <span class="flex items-center gap-1.5 sm:gap-2">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
                         <span class="hidden xs:inline">Text</span>
+                    </span>
+                </button>
+                <button class="filter-btn px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium bg-dark-700 dark:bg-dark-700 border border-dark-500 dark:border-dark-500 hover:border-accent transition-all flex-shrink-0" data-filter="videos">
+                    <span class="flex items-center gap-1.5 sm:gap-2">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                        <span class="hidden xs:inline">Videos</span>
                     </span>
                 </button>
             </div>
@@ -461,6 +515,116 @@
         </div>
     </div>
 
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" id="settingsOverlay"></div>
+        <div class="relative bg-dark-800 dark:bg-dark-800 rounded-2xl border border-dark-600 p-5 sm:p-8 w-full max-w-lg animate-slide-up max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-accent/20 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-white dark:text-white">Settings</h3>
+                        <p class="text-xs text-gray-500">Configure your preferences</p>
+                    </div>
+                </div>
+                <button id="closeSettings" class="p-2 rounded-lg hover:bg-dark-700 transition-colors text-gray-400 hover:text-white">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            
+            <div class="space-y-6">
+                <!-- Theme Toggle -->
+                <div class="bg-dark-700 dark:bg-dark-700 rounded-xl p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="font-medium text-white dark:text-white">Theme</h4>
+                            <p class="text-sm text-gray-500 mt-1">Switch between light and dark mode</p>
+                        </div>
+                        <button id="themeToggle" class="relative w-14 h-8 rounded-full bg-dark-600 transition-colors">
+                            <span id="themeToggleKnob" class="absolute left-1 top-1 w-6 h-6 rounded-full bg-white shadow-md transition-transform flex items-center justify-center">
+                                <svg id="themeDarkIcon" class="w-4 h-4 text-dark-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                                </svg>
+                                <svg id="themeLightIcon" class="w-4 h-4 text-yellow-500 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                                </svg>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+                
+            </div>
+            
+            <div class="flex justify-end gap-3 mt-6 pt-6 border-t border-dark-600">
+                <button id="cancelSettings" class="px-4 py-2 rounded-lg text-sm font-medium bg-dark-700 hover:bg-dark-600 transition-colors">Cancel</button>
+                <button id="saveSettings" class="px-4 py-2 rounded-lg text-sm font-medium bg-accent text-dark-900 hover:bg-accent-light transition-colors">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compression Modal -->
+    <div id="compressionModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" id="compressionOverlay"></div>
+        <div class="relative bg-dark-800 dark:bg-dark-800 rounded-2xl border border-dark-600 p-5 sm:p-8 w-full max-w-md animate-slide-up">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-accent/20 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-white dark:text-white">Download Options</h3>
+                        <p id="compressionFileName" class="text-xs text-gray-500 truncate max-w-[200px]">filename.jpg</p>
+                    </div>
+                </div>
+                <button id="closeCompression" class="p-2 rounded-lg hover:bg-dark-700 transition-colors text-gray-400 hover:text-white">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <!-- Compression Toggle -->
+                <div class="flex items-center justify-between bg-dark-700 rounded-xl p-4">
+                    <div>
+                        <h4 class="font-medium text-white">Compress File</h4>
+                        <p class="text-sm text-gray-500 mt-1">Reduce file size before download</p>
+                    </div>
+                    <button id="compressionToggle" class="relative w-12 h-7 rounded-full bg-dark-600 transition-colors">
+                        <span id="compressionToggleKnob" class="absolute left-1 top-1 w-5 h-5 rounded-full bg-gray-400 transition-all"></span>
+                    </button>
+                </div>
+                
+                <!-- Quality Slider -->
+                <div id="qualitySection" class="bg-dark-700 rounded-xl p-4 opacity-50 pointer-events-none">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="font-medium text-white">Quality</h4>
+                        <span id="qualityValue" class="text-accent font-mono text-sm">80%</span>
+                    </div>
+                    <input type="range" id="qualitySlider" min="10" max="100" value="80" class="w-full h-2 bg-dark-600 rounded-lg appearance-none cursor-pointer accent-accent">
+                    <div class="flex justify-between text-xs text-gray-500 mt-2">
+                        <span>Smaller Size</span>
+                        <span>Better Quality</span>
+                    </div>
+                </div>
+                
+                <p class="text-xs text-gray-500 text-center">
+                    Compression is available for images (PNG, JPG, GIF) and PDFs. Original file is not modified.
+                </p>
+            </div>
+            
+            <div class="flex gap-3 mt-6">
+                <button id="downloadOriginal" class="flex-1 px-4 py-3 rounded-lg text-sm font-medium bg-dark-700 hover:bg-dark-600 transition-colors">Download Original</button>
+                <button id="downloadCompressed" class="flex-1 px-4 py-3 rounded-lg text-sm font-medium bg-accent text-dark-900 hover:bg-accent-light transition-colors">Download</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Notifications -->
     <div id="toastContainer" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
 
@@ -474,6 +638,11 @@
         let currentFileId = null;
         let uploadControllers = new Map();
         let connectionInfo = null;
+        let appSettings = { theme: 'dark', upload_dir: '', download_dir: '' };
+        let compressionEnabled = false;
+        let currentDownloadFile = null;
+        let compressionSupport = { image_compression: false, pdf_compression: false };
+
 
         // ============== API Client ==============
         const api = {
@@ -574,6 +743,25 @@
             async getStats() {
                 const response = await fetch('/api/v1/stats');
                 return response.json();
+            },
+            
+            async getSettings() {
+                const response = await fetch('/api/v1/settings');
+                return response.json();
+            },
+            
+            async updateSettings(settings) {
+                const response = await fetch('/api/v1/settings', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+                return response.json();
+            },
+            
+            async getCompressionSupport() {
+                const response = await fetch('/api/v1/compression/support');
+                return response.json();
             }
         };
 
@@ -656,9 +844,9 @@
                             <button class="action-preview p-1.5 sm:p-2 rounded-lg bg-dark-700/80 hover:bg-dark-600 transition-colors" title="Preview">
                                 <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                             </button>
-                            <a href="/api/v1/files/${file.id}/download" class="action-download p-1.5 sm:p-2 rounded-lg bg-dark-700/80 hover:bg-dark-600 transition-colors" title="Download" download>
+                            <button class="action-download p-1.5 sm:p-2 rounded-lg bg-dark-700/80 hover:bg-dark-600 transition-colors" title="Download">
                                 <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                            </a>
+                            </button>
                             <button class="action-rename p-1.5 sm:p-2 rounded-lg bg-dark-700/80 hover:bg-dark-600 transition-colors hidden sm:block" title="Rename">
                                 <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                             </button>
@@ -707,9 +895,9 @@
                             <button class="action-preview p-2 rounded-lg hover:bg-dark-600 transition-colors" title="Preview">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                             </button>
-                            <a href="/api/v1/files/${file.id}/download" class="action-download p-2 rounded-lg hover:bg-dark-600 transition-colors" title="Download" download>
+                            <button class="action-download p-2 rounded-lg hover:bg-dark-600 transition-colors" title="Download">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                            </a>
+                            </button>
                             <button class="action-rename p-2 rounded-lg hover:bg-dark-600 transition-colors" title="Rename">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                             </button>
@@ -753,6 +941,11 @@
                 card.querySelector('.action-preview')?.addEventListener('click', (e) => {
                     e.stopPropagation();
                     openPreview(file);
+                });
+                
+                card.querySelector('.action-download')?.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openCompressionModal(file);
                 });
                 
                 card.querySelector('.action-rename')?.addEventListener('click', (e) => {
@@ -1177,11 +1370,13 @@
                 const batchActions = document.getElementById('batchActions');
                 
                 if (selectModeActive) {
-                    btn.classList.add('bg-accent', 'text-dark-900');
+                    btn.classList.add('bg-accent', 'text-white', 'border-accent');
+                    btn.classList.remove('text-gray-300');
                     btn.textContent = 'Done';
                     batchActions.classList.remove('hidden');
                 } else {
-                    btn.classList.remove('bg-accent', 'text-dark-900');
+                    btn.classList.remove('bg-accent', 'text-white', 'border-accent');
+                    btn.classList.add('text-gray-300');
                     btn.textContent = 'Select';
                     batchActions.classList.add('hidden');
                     selectedFiles.clear();
@@ -1222,6 +1417,8 @@
                     closeRenameModal();
                     closeDeleteModal();
                     closeConnectionModal();
+                    closeSettingsModal();
+                    closeCompressionModal();
                 }
             });
             
@@ -1246,6 +1443,26 @@
             
             // Load connection info on startup
             loadConnectionInfo();
+            
+            // Load settings and compression support
+            loadSettings();
+            loadCompressionSupport();
+            
+            // Settings modal
+            document.getElementById('settingsBtn').addEventListener('click', openSettingsModal);
+            document.getElementById('closeSettings').addEventListener('click', closeSettingsModal);
+            document.getElementById('settingsOverlay').addEventListener('click', closeSettingsModal);
+            document.getElementById('cancelSettings').addEventListener('click', closeSettingsModal);
+            document.getElementById('saveSettings').addEventListener('click', saveSettings);
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+            
+            // Compression modal
+            document.getElementById('closeCompression').addEventListener('click', closeCompressionModal);
+            document.getElementById('compressionOverlay').addEventListener('click', closeCompressionModal);
+            document.getElementById('compressionToggle').addEventListener('click', toggleCompression);
+            document.getElementById('qualitySlider').addEventListener('input', updateQualityDisplay);
+            document.getElementById('downloadOriginal').addEventListener('click', downloadOriginal);
+            document.getElementById('downloadCompressed').addEventListener('click', downloadWithCompression);
             
             // Refresh stats periodically
             setInterval(loadStats, 30000);
@@ -1327,6 +1544,172 @@
                 showToast('URL copied to clipboard!', 'success');
             }
         }
+        
+        // ============== Settings Modal ==============
+        async function loadSettings() {
+            try {
+                appSettings = await api.getSettings();
+                applyTheme(appSettings.theme || 'dark');
+            } catch (error) {
+                console.error('Failed to load settings:', error);
+            }
+        }
+        
+        function openSettingsModal() {
+            document.getElementById('settingsModal').classList.remove('hidden');
+            updateThemeToggleUI();
+        }
+        
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').classList.add('hidden');
+        }
+        
+        async function saveSettings() {
+            try {
+                appSettings = await api.updateSettings({
+                    theme: appSettings.theme
+                });
+                showToast('Settings saved successfully', 'success');
+                closeSettingsModal();
+            } catch (error) {
+                showToast('Failed to save settings', 'error');
+            }
+        }
+        
+        function toggleTheme() {
+            appSettings.theme = appSettings.theme === 'dark' ? 'light' : 'dark';
+            applyTheme(appSettings.theme);
+            updateThemeToggleUI();
+            api.updateSettings({ theme: appSettings.theme }).catch(console.error);
+        }
+        
+        function applyTheme(theme) {
+            const html = document.documentElement;
+            if (theme === 'dark') {
+                html.classList.add('dark');
+                html.classList.remove('light');
+            } else {
+                html.classList.remove('dark');
+                html.classList.add('light');
+            }
+        }
+        
+        function updateThemeToggleUI() {
+            const knob = document.getElementById('themeToggleKnob');
+            const darkIcon = document.getElementById('themeDarkIcon');
+            const lightIcon = document.getElementById('themeLightIcon');
+            const toggle = document.getElementById('themeToggle');
+            
+            if (appSettings.theme === 'light') {
+                knob.style.transform = 'translateX(24px)';
+                toggle.classList.add('bg-accent');
+                toggle.classList.remove('bg-dark-600');
+                darkIcon.classList.add('hidden');
+                lightIcon.classList.remove('hidden');
+            } else {
+                knob.style.transform = 'translateX(0)';
+                toggle.classList.remove('bg-accent');
+                toggle.classList.add('bg-dark-600');
+                darkIcon.classList.remove('hidden');
+                lightIcon.classList.add('hidden');
+            }
+        }
+        
+        // ============== Compression Modal ==============
+        async function loadCompressionSupport() {
+            try {
+                compressionSupport = await api.getCompressionSupport();
+            } catch (error) {
+                console.error('Failed to load compression support:', error);
+            }
+        }
+        
+        function canCompress(file) {
+            if (!file) return false;
+            const mime = file.type || '';
+            if (mime.startsWith('image/') && compressionSupport.image_compression) return true;
+            if (mime === 'application/pdf' && compressionSupport.pdf_compression) return true;
+            return false;
+        }
+        
+        function openCompressionModal(file) {
+            currentDownloadFile = file;
+            document.getElementById('compressionFileName').textContent = file.filename;
+            document.getElementById('compressionModal').classList.remove('hidden');
+            
+            compressionEnabled = false;
+            updateCompressionToggleUI();
+            
+            const compressible = canCompress(file);
+            document.getElementById('compressionToggle').disabled = !compressible;
+            if (!compressible) {
+                document.getElementById('compressionToggle').parentElement.classList.add('opacity-50');
+            } else {
+                document.getElementById('compressionToggle').parentElement.classList.remove('opacity-50');
+            }
+        }
+        
+        function closeCompressionModal() {
+            document.getElementById('compressionModal').classList.add('hidden');
+            currentDownloadFile = null;
+        }
+        
+        function toggleCompression() {
+            if (!canCompress(currentDownloadFile)) return;
+            compressionEnabled = !compressionEnabled;
+            updateCompressionToggleUI();
+        }
+        
+        function updateCompressionToggleUI() {
+            const knob = document.getElementById('compressionToggleKnob');
+            const toggle = document.getElementById('compressionToggle');
+            const qualitySection = document.getElementById('qualitySection');
+            
+            if (compressionEnabled) {
+                knob.style.transform = 'translateX(20px)';
+                knob.classList.remove('bg-gray-400');
+                knob.classList.add('bg-accent');
+                toggle.classList.add('bg-accent/30');
+                qualitySection.classList.remove('opacity-50', 'pointer-events-none');
+            } else {
+                knob.style.transform = 'translateX(0)';
+                knob.classList.add('bg-gray-400');
+                knob.classList.remove('bg-accent');
+                toggle.classList.remove('bg-accent/30');
+                qualitySection.classList.add('opacity-50', 'pointer-events-none');
+            }
+        }
+        
+        function updateQualityDisplay() {
+            const value = document.getElementById('qualitySlider').value;
+            document.getElementById('qualityValue').textContent = value + '%';
+        }
+        
+        function downloadOriginal() {
+            if (!currentDownloadFile) return;
+            const a = document.createElement('a');
+            a.href = `/api/v1/files/${currentDownloadFile.id}/download`;
+            a.download = currentDownloadFile.filename;
+            a.click();
+            closeCompressionModal();
+        }
+        
+        function downloadWithCompression() {
+            if (!currentDownloadFile) return;
+            
+            if (compressionEnabled && canCompress(currentDownloadFile)) {
+                const quality = document.getElementById('qualitySlider').value;
+                const a = document.createElement('a');
+                a.href = `/api/v1/files/${currentDownloadFile.id}/download/compressed?quality=${quality}`;
+                a.download = currentDownloadFile.filename;
+                a.click();
+            } else {
+                downloadOriginal();
+                return;
+            }
+            closeCompressionModal();
+        }
+        
     </script>
 </body>
 </html>
