@@ -9,14 +9,17 @@ A lightweight, self-hosted file-sharing solution for local networks. Share files
 
 ## Features
 
-- **Drag & Drop Upload** - Simply drag files onto the page to upload
+- **Drag & Drop Upload** - Simply drag files or folders onto the page to upload
+- **Folder Upload Support** - Upload entire folder structures with preserved hierarchy
+- **Multiple Files** - Upload multiple files at once with batch processing
 - **Real-time Progress** - Visual upload progress with cancel support
 - **Dark/Light Theme** - Toggle between dark and light modes
 - **File Preview** - Preview images, PDFs, and text files directly in browser
 - **File Compression** - Compress images and PDFs on download with adjustable quality
 - **Batch Operations** - Download multiple files as ZIP or delete in batch
+- **Undo Delete** - Recover accidentally deleted files within 24 hours
 - **Search & Filter** - Find files by name, filter by type (Images, Docs, Videos, etc.)
-- **Settings Menu** - Configure upload/download directories with folder browser
+- **Settings Menu** - Configure application preferences
 - **QR Code Sharing** - Scan QR code to connect from mobile devices
 - **LAN Only** - Files stay within your local network for privacy
 - **Zero Configuration** - Single command deployment

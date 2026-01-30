@@ -50,6 +50,8 @@ Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 # In-memory file metadata store (in production, use SQLite or similar)
 METADATA_FILE = os.path.join(UPLOAD_DIR, '.metadata.json')
 SETTINGS_FILE = os.path.join(UPLOAD_DIR, '.settings.json')
+TRASH_FILE = os.path.join(UPLOAD_DIR, '.trash.json')
+TRASH_EXPIRY = 86400  # 24 hours in seconds
 
 # Default settings
 DEFAULT_SETTINGS = {
@@ -93,6 +95,73 @@ def save_metadata(metadata):
     """Save file metadata to disk."""
     with open(METADATA_FILE, 'w') as f:
         json.dump(metadata, f, indent=2)
+
+
+def load_trash():
+    """Load deleted files from trash."""
+    if os.path.exists(TRASH_FILE):
+        try:
+            with open(TRASH_FILE, 'r') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError):
+            return {'deleted_files': {}}
+    return {'deleted_files': {}}
+
+
+def save_trash(trash):
+    """Save deleted files to trash."""
+    with open(TRASH_FILE, 'w') as f:
+        json.dump(trash, f, indent=2)
+
+
+def move_to_trash(file_id, file_info):
+    """Move a deleted file to trash for potential recovery."""
+    trash = load_trash()
+    if 'deleted_files' not in trash:
+        trash['deleted_files'] = {}
+    
+    trash['deleted_files'][file_id] = {
+        'file_info': file_info,
+        'deleted_at': datetime.now(timezone.utc).isoformat(),
+        'expires_at': (datetime.now(timezone.utc) + 
+                      __import__('datetime').timedelta(seconds=TRASH_EXPIRY)).isoformat()
+    }
+    save_trash(trash)
+
+
+def restore_from_trash(file_id):
+    """Restore a file from trash."""
+    trash = load_trash()
+    
+    if file_id not in trash.get('deleted_files', {}):
+        return False
+    
+    trash_entry = trash['deleted_files'][file_id]
+    file_info = trash_entry['file_info']
+    
+    # Check if trash entry has expired
+    expires_at = datetime.fromisoformat(trash_entry['expires_at'])
+    if datetime.now(timezone.utc) > expires_at:
+        # Trash expired, file can't be recovered
+        del trash['deleted_files'][file_id]
+        save_trash(trash)
+        return False
+    
+    # Restore file to metadata
+    metadata = load_metadata()
+    metadata['files'][file_id] = file_info
+    
+    # Ensure folder exists
+    if file_info.get('folder_path') not in metadata.get('folders', []):
+        metadata['folders'].append(file_info.get('folder_path', 'root'))
+    
+    save_metadata(metadata)
+    
+    # Remove from trash
+    del trash['deleted_files'][file_id]
+    save_trash(trash)
+    
+    return True
 
 
 def get_file_icon(mime_type, filename):
@@ -226,99 +295,156 @@ def get_connection_info():
 
 @app.route('/api/v1/upload', methods=['POST'])
 def upload_file():
-    """Handle file upload with support for chunked uploads."""
-    if 'file' not in request.files:
+    """Handle file upload with support for multiple files and folder structure."""
+    if 'files' not in request.files:
         return jsonify({
             'error': 'NO_FILE',
-            'message': 'No file provided in request'
+            'message': 'No files provided in request'
         }), 400
     
-    file = request.files['file']
+    files = request.files.getlist('files')
+    base_folder = request.form.get('folder_path', 'root')
     
-    if file.filename == '':
+    if not files or (len(files) == 1 and files[0].filename == ''):
         return jsonify({
             'error': 'EMPTY_FILENAME',
-            'message': 'No file selected'
+            'message': 'No files selected'
         }), 400
     
-    if not allowed_file(file.filename):
-        return jsonify({
-            'error': 'INVALID_TYPE',
-            'message': f'File type not allowed. Allowed types: {", ".join(ALLOWED_EXTENSIONS)}'
-        }), 400
-    
-    # Get folder path from request
-    folder_path = request.form.get('folder_path', 'root')
-    
-    # Generate unique file ID
-    file_id = str(uuid.uuid4())
-    
-    # Secure the filename
-    original_filename = file.filename
-    safe_filename = secure_filename(original_filename)
-    
-    # Handle duplicate filenames
     metadata = load_metadata()
-    existing_files = [f['filename'] for f in metadata['files'].values() 
-                      if f.get('folder_path') == folder_path]
+    uploaded_files = []
+    errors = []
     
-    if safe_filename in existing_files:
-        name, ext = os.path.splitext(safe_filename)
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        safe_filename = f"{name}_{timestamp}{ext}"
-    
-    # Create folder structure if needed
-    folder_dir = os.path.join(UPLOAD_DIR, folder_path) if folder_path != 'root' else UPLOAD_DIR
-    Path(folder_dir).mkdir(parents=True, exist_ok=True)
-    
-    # Save file
-    file_path = os.path.join(folder_dir, f"{file_id}_{safe_filename}")
-    file.save(file_path)
-    
-    # Get file info
-    file_size = os.path.getsize(file_path)
-    mime_type, _ = mimetypes.guess_type(safe_filename)
-    
-    # Check file size
-    if file_size > MAX_FILE_SIZE:
-        os.remove(file_path)
-        return jsonify({
-            'error': 'FILE_TOO_LARGE',
-            'message': f'File exceeds maximum size of {format_file_size(MAX_FILE_SIZE)}'
-        }), 413
-    
-    # Store metadata
-    file_metadata = {
-        'id': file_id,
-        'filename': safe_filename,
-        'original_filename': original_filename,
-        'size': file_size,
-        'size_formatted': format_file_size(file_size),
-        'type': mime_type or 'application/octet-stream',
-        'icon': get_file_icon(mime_type, safe_filename),
-        'upload_date': datetime.now(timezone.utc).isoformat(),
-        'folder_path': folder_path,
-        'file_path': file_path
-    }
-    
-    metadata['files'][file_id] = file_metadata
-    
-    # Add folder if new
-    if folder_path not in metadata['folders']:
-        metadata['folders'].append(folder_path)
+    for file in files:
+        if file.filename == '':
+            continue
+        
+        # Get relative path for nested folders
+        file_path_str = file.filename
+        # Support folder structure from webkitdirectory
+        path_parts = file_path_str.split('/')
+        
+        if len(path_parts) > 1:
+            # File is in a subdirectory
+            relative_path = '/'.join(path_parts[:-1])
+            folder_path = f"{base_folder}/{relative_path}" if base_folder != 'root' else relative_path
+            filename = path_parts[-1]
+        else:
+            # File is in root folder
+            folder_path = base_folder
+            filename = file_path_str
+        
+        if not allowed_file(filename):
+            errors.append({
+                'filename': filename,
+                'error': 'INVALID_TYPE',
+                'message': f'File type not allowed'
+            })
+            continue
+        
+        # Generate unique file ID
+        file_id = str(uuid.uuid4())
+        
+        # Secure the filename
+        original_filename = filename
+        safe_filename = secure_filename(original_filename)
+        
+        # Handle duplicate filenames
+        existing_files = [f['filename'] for f in metadata['files'].values() 
+                          if f.get('folder_path') == folder_path]
+        
+        if safe_filename in existing_files:
+            name, ext = os.path.splitext(safe_filename)
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            safe_filename = f"{name}_{timestamp}{ext}"
+        
+        # Create folder structure if needed
+        folder_dir = os.path.join(UPLOAD_DIR, folder_path.replace('/', os.sep)) if folder_path != 'root' else UPLOAD_DIR
+        try:
+            Path(folder_dir).mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            errors.append({
+                'filename': filename,
+                'error': 'FOLDER_CREATE_ERROR',
+                'message': str(e)
+            })
+            continue
+        
+        # Save file
+        file_path = os.path.join(folder_dir, f"{file_id}_{safe_filename}")
+        try:
+            file.save(file_path)
+        except Exception as e:
+            errors.append({
+                'filename': filename,
+                'error': 'SAVE_ERROR',
+                'message': str(e)
+            })
+            continue
+        
+        # Get file info
+        try:
+            file_size = os.path.getsize(file_path)
+        except Exception as e:
+            os.remove(file_path)
+            errors.append({
+                'filename': filename,
+                'error': 'SIZE_CHECK_ERROR',
+                'message': str(e)
+            })
+            continue
+        
+        mime_type, _ = mimetypes.guess_type(safe_filename)
+        
+        # Check file size
+        if file_size > MAX_FILE_SIZE:
+            os.remove(file_path)
+            errors.append({
+                'filename': filename,
+                'error': 'FILE_TOO_LARGE',
+                'message': f'Exceeds {format_file_size(MAX_FILE_SIZE)}'
+            })
+            continue
+        
+        # Store metadata
+        file_metadata = {
+            'id': file_id,
+            'filename': safe_filename,
+            'original_filename': original_filename,
+            'size': file_size,
+            'size_formatted': format_file_size(file_size),
+            'type': mime_type or 'application/octet-stream',
+            'icon': get_file_icon(mime_type, safe_filename),
+            'upload_date': datetime.now(timezone.utc).isoformat(),
+            'folder_path': folder_path,
+            'file_path': file_path
+        }
+        
+        metadata['files'][file_id] = file_metadata
+        
+        # Add folder if new
+        if folder_path not in metadata['folders']:
+            metadata['folders'].append(folder_path)
+        
+        uploaded_files.append({
+            'id': file_id,
+            'filename': safe_filename,
+            'size': file_size,
+            'size_formatted': format_file_size(file_size),
+            'type': mime_type,
+            'icon': file_metadata['icon'],
+            'upload_date': file_metadata['upload_date'],
+            'url': f'/api/v1/files/{file_id}/download'
+        })
     
     save_metadata(metadata)
     
     return jsonify({
-        'id': file_id,
-        'filename': safe_filename,
-        'size': file_size,
-        'size_formatted': format_file_size(file_size),
-        'type': mime_type,
-        'icon': file_metadata['icon'],
-        'upload_date': file_metadata['upload_date'],
-        'url': f'/api/v1/files/{file_id}/download'
-    }), 201
+        'uploaded': uploaded_files,
+        'errors': errors,
+        'total_uploaded': len(uploaded_files),
+        'total_errors': len(errors)
+    }), 201 if uploaded_files else 400
 
 
 @app.route('/api/v1/files', methods=['GET'])
@@ -455,7 +581,7 @@ def preview_file(file_id):
 
 @app.route('/api/v1/files/<file_id>', methods=['DELETE'])
 def delete_file(file_id):
-    """Delete a specific file."""
+    """Delete a specific file (moves to trash for recovery)."""
     metadata = load_metadata()
     
     if file_id not in metadata.get('files', {}):
@@ -469,13 +595,26 @@ def delete_file(file_id):
     
     # Delete physical file
     if os.path.exists(file_path):
-        os.remove(file_path)
+        try:
+            os.remove(file_path)
+        except Exception as e:
+            return jsonify({
+                'error': 'DELETE_ERROR',
+                'message': str(e)
+            }), 500
+    
+    # Move to trash for recovery
+    move_to_trash(file_id, file_info)
     
     # Remove from metadata
     del metadata['files'][file_id]
     save_metadata(metadata)
     
-    return '', 204
+    return jsonify({
+        'id': file_id,
+        'filename': file_info['filename'],
+        'message': 'File deleted. Click "Undo" to recover.'
+    }), 200
 
 
 @app.route('/api/v1/files/<file_id>/rename', methods=['PATCH'])
@@ -660,7 +799,7 @@ def batch_download():
 
 @app.route('/api/v1/batch/delete', methods=['POST'])
 def batch_delete():
-    """Delete multiple files at once."""
+    """Delete multiple files at once (moves to trash for recovery)."""
     data = request.get_json()
     file_ids = data.get('file_ids', [])
     
@@ -682,6 +821,10 @@ def batch_delete():
             try:
                 if os.path.exists(file_path):
                     os.remove(file_path)
+                
+                # Move to trash for recovery
+                move_to_trash(file_id, file_info)
+                
                 del metadata['files'][file_id]
                 deleted.append(file_id)
             except Exception as e:
@@ -694,7 +837,180 @@ def batch_delete():
     return jsonify({
         'deleted': deleted,
         'errors': errors,
-        'total_deleted': len(deleted)
+        'total_deleted': len(deleted),
+        'message': f'{len(deleted)} file(s) deleted. Click "Undo" to recover.'
+    })
+
+
+@app.route('/api/v1/files/<file_id>/restore', methods=['POST'])
+def restore_file(file_id):
+    """Restore a deleted file from trash."""
+    success = restore_from_trash(file_id)
+    
+    if not success:
+        trash = load_trash()
+        if file_id in trash.get('deleted_files', {}):
+            return jsonify({
+                'error': 'TRASH_EXPIRED',
+                'message': 'File recovery period expired (24 hours). File permanently deleted.'
+            }), 410
+        else:
+            return jsonify({
+                'error': 'NOT_IN_TRASH',
+                'message': 'File not found in trash'
+            }), 404
+    
+    return jsonify({
+        'id': file_id,
+        'message': 'File restored successfully'
+    }), 200
+
+
+@app.route('/api/v1/batch/restore', methods=['POST'])
+def batch_restore():
+    """Restore multiple deleted files from trash."""
+    data = request.get_json()
+    file_ids = data.get('file_ids', [])
+    
+    if not file_ids:
+        return jsonify({
+            'error': 'NO_FILES',
+            'message': 'No files selected for recovery'
+        }), 400
+    
+    restored = []
+    errors = []
+    
+    for file_id in file_ids:
+        success = restore_from_trash(file_id)
+        if success:
+            restored.append(file_id)
+        else:
+            trash = load_trash()
+            if file_id in trash.get('deleted_files', {}):
+                errors.append({
+                    'id': file_id,
+                    'error': 'TRASH_EXPIRED',
+                    'message': 'Recovery period expired'
+                })
+            else:
+                errors.append({
+                    'id': file_id,
+                    'error': 'NOT_IN_TRASH',
+                    'message': 'File not found in trash'
+                })
+    
+    return jsonify({
+        'restored': restored,
+        'errors': errors,
+        'total_restored': len(restored)
+    }), 200
+
+
+@app.route('/api/v1/trash', methods=['GET'])
+def get_trash():
+    """Get list of deleted files in trash."""
+    trash = load_trash()
+    deleted_files = trash.get('deleted_files', {})
+    
+    # Filter out expired entries and format response
+    now = datetime.now(timezone.utc)
+    files = []
+    expired_ids = []
+    
+    for file_id, entry in deleted_files.items():
+        expires_at = datetime.fromisoformat(entry['expires_at'])
+        if now > expires_at:
+            expired_ids.append(file_id)
+            continue
+        
+        file_info = entry['file_info']
+        files.append({
+            'id': file_id,
+            'filename': file_info.get('filename', 'Unknown'),
+            'size': file_info.get('size', 0),
+            'size_formatted': file_info.get('size_formatted', '0 B'),
+            'type': file_info.get('type', ''),
+            'icon': file_info.get('icon', 'file'),
+            'deleted_at': entry['deleted_at'],
+            'expires_at': entry['expires_at']
+        })
+    
+    # Clean up expired entries
+    if expired_ids:
+        for file_id in expired_ids:
+            del deleted_files[file_id]
+        save_trash(trash)
+    
+    # Sort by deletion time (newest first)
+    files.sort(key=lambda x: x['deleted_at'], reverse=True)
+    
+    return jsonify({
+        'files': files,
+        'total': len(files)
+    })
+
+
+@app.route('/api/v1/trash', methods=['DELETE'])
+def empty_trash():
+    """Permanently delete all files in trash."""
+    trash = load_trash()
+    deleted_files = trash.get('deleted_files', {})
+    
+    # Delete physical files
+    deleted_count = 0
+    for file_id, entry in deleted_files.items():
+        file_info = entry.get('file_info', {})
+        file_path = file_info.get('file_path')
+        if file_path and os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+                deleted_count += 1
+            except Exception:
+                pass
+    
+    # Clear trash
+    trash['deleted_files'] = {}
+    save_trash(trash)
+    
+    return jsonify({
+        'message': f'Permanently deleted {deleted_count} file(s)',
+        'deleted_count': deleted_count
+    })
+
+
+@app.route('/api/v1/trash/<file_id>', methods=['DELETE'])
+def permanently_delete_file(file_id):
+    """Permanently delete a specific file from trash."""
+    trash = load_trash()
+    
+    if file_id not in trash.get('deleted_files', {}):
+        return jsonify({
+            'error': 'NOT_FOUND',
+            'message': 'File not found in trash'
+        }), 404
+    
+    entry = trash['deleted_files'][file_id]
+    file_info = entry.get('file_info', {})
+    file_path = file_info.get('file_path')
+    
+    # Delete physical file
+    if file_path and os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+        except Exception as e:
+            return jsonify({
+                'error': 'DELETE_FAILED',
+                'message': str(e)
+            }), 500
+    
+    # Remove from trash
+    del trash['deleted_files'][file_id]
+    save_trash(trash)
+    
+    return jsonify({
+        'message': 'File permanently deleted',
+        'id': file_id
     })
 
 

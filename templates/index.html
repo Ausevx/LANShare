@@ -217,6 +217,13 @@
                         <p id="storageUsed" class="text-lg font-semibold text-gray-300 font-mono">0 B</p>
                     </div>
                     <div class="w-px h-8 bg-dark-600 hidden lg:block"></div>
+                    <!-- Trash Button -->
+                    <button id="trashBtn" class="p-2 rounded-lg bg-dark-700 hover:bg-dark-600 transition-colors text-gray-400 hover:text-white relative" title="Trash">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        <span id="trashCount" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-danger text-white text-xs rounded-full flex items-center justify-center">0</span>
+                    </button>
                     <!-- Settings Button -->
                     <button id="settingsBtn" class="p-2 rounded-lg bg-dark-700 hover:bg-dark-600 transition-colors text-gray-400 hover:text-white" title="Settings">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -266,7 +273,10 @@
                             <p class="text-base sm:text-lg font-medium text-gray-200">Drop files here or <span class="text-accent">browse</span></p>
                             <p class="text-xs sm:text-sm text-gray-500 mt-1">PDF, Images, Docs & more • Max 500MB</p>
                         </div>
-                        <input type="file" id="fileInput" multiple class="hidden" accept=".pdf,.png,.jpg,.jpeg,.gif,.txt,.md,.json,.csv,.doc,.docx,.xlsx,.xls,.ppt,.pptx,.zip,.tar,.gz,.mp3,.mp4,.wav,.avi,.mov">
+                        <!-- Folder input (with webkitdirectory for folder uploads) -->
+                        <input type="file" id="fileInputFolder" multiple webkitdirectory mozdirectory msdirectory odirectory directory class="hidden" accept=".pdf,.png,.jpg,.jpeg,.gif,.txt,.md,.json,.csv,.doc,.docx,.xlsx,.xls,.ppt,.pptx,.zip,.tar,.gz,.mp3,.mp4,.wav,.avi,.mov">
+                        <!-- File input (normal multiple file picker) -->
+                        <input type="file" id="fileInputFiles" multiple class="hidden" accept=".pdf,.png,.jpg,.jpeg,.gif,.txt,.md,.json,.csv,.doc,.docx,.xlsx,.xls,.ppt,.pptx,.zip,.tar,.gz,.mp3,.mp4,.wav,.avi,.mov">
                     </div>
                 </div>
             </div>
@@ -431,19 +441,41 @@
     <div id="deleteModal" class="fixed inset-0 z-50 hidden flex items-center justify-center">
         <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" id="deleteOverlay"></div>
         <div class="relative bg-dark-800 rounded-2xl border border-dark-600 p-6 w-full max-w-md animate-slide-up">
-            <div class="flex items-center gap-4 mb-4">
-                <div class="w-12 h-12 rounded-xl bg-danger/20 flex items-center justify-center">
-                    <svg class="w-6 h-6 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            <div id="deleteConfirmSection">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-12 h-12 rounded-xl bg-danger/20 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold">Delete File</h3>
+                        <p id="deleteFileName" class="text-sm text-gray-400"></p>
+                    </div>
                 </div>
-                <div>
-                    <h3 class="text-lg font-semibold">Delete File</h3>
-                    <p id="deleteFileName" class="text-sm text-gray-400"></p>
+                <p class="text-gray-300 mb-6">Are you sure you want to delete this file? You can undo within 24 hours.</p>
+                <div class="flex justify-end gap-3">
+                    <button id="cancelDelete" class="px-4 py-2 rounded-lg text-sm font-medium bg-dark-700 hover:bg-dark-600 transition-colors">Cancel</button>
+                    <button id="confirmDelete" class="px-4 py-2 rounded-lg text-sm font-medium bg-danger text-white hover:bg-red-600 transition-colors">Delete</button>
                 </div>
             </div>
-            <p class="text-gray-300 mb-6">Are you sure you want to delete this file? This action cannot be undone.</p>
-            <div class="flex justify-end gap-3">
-                <button id="cancelDelete" class="px-4 py-2 rounded-lg text-sm font-medium bg-dark-700 hover:bg-dark-600 transition-colors">Cancel</button>
-                <button id="confirmDelete" class="px-4 py-2 rounded-lg text-sm font-medium bg-danger text-white hover:bg-red-600 transition-colors">Delete</button>
+            
+            <div id="deleteSuccessSection" class="hidden">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold">File Deleted</h3>
+                        <p id="deleteSuccessFileName" class="text-sm text-gray-400"></p>
+                    </div>
+                </div>
+                <p class="text-gray-300 mb-6">File deleted successfully. You can recover it within 24 hours.</p>
+                <div class="flex justify-end gap-3">
+                    <button id="undoDelete" class="px-4 py-2 rounded-lg text-sm font-medium bg-accent text-dark-900 hover:bg-accent-light transition-colors flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"/></svg>
+                        Undo Delete
+                    </button>
+                    <button id="closeDelete" class="px-4 py-2 rounded-lg text-sm font-medium bg-dark-700 hover:bg-dark-600 transition-colors">Done</button>
+                </div>
             </div>
         </div>
     </div>
@@ -511,6 +543,47 @@
                 <p class="text-[10px] sm:text-xs text-gray-500 text-center leading-relaxed">
                     Scan the QR code with another device on the same network, or enter the URL manually in a browser.
                 </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trash Modal -->
+    <div id="trashModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" id="trashOverlay"></div>
+        <div class="relative bg-dark-800 rounded-2xl border border-dark-600 p-5 sm:p-8 w-full max-w-lg animate-slide-up max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-danger/20 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-white">Recently Deleted</h3>
+                        <p class="text-xs text-gray-500">Files can be recovered within 24 hours</p>
+                    </div>
+                </div>
+                <button id="closeTrash" class="p-2 rounded-lg hover:bg-dark-700 transition-colors text-gray-400 hover:text-white">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            
+            <div id="trashList" class="space-y-2 max-h-80 overflow-y-auto">
+                <!-- Trash items will be loaded here -->
+            </div>
+            
+            <div id="trashEmpty" class="hidden text-center py-8">
+                <svg class="w-12 h-12 mx-auto text-gray-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+                <p class="text-gray-500">Trash is empty</p>
+            </div>
+            
+            <div id="trashActions" class="mt-4 pt-4 border-t border-dark-600 hidden">
+                <button id="emptyTrashBtn" class="w-full px-4 py-2 rounded-lg text-sm font-medium bg-danger/20 text-danger hover:bg-danger/30 transition-colors flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    Empty Trash Permanently
+                </button>
             </div>
         </div>
     </div>
@@ -642,6 +715,8 @@
         let compressionEnabled = false;
         let currentDownloadFile = null;
         let compressionSupport = { image_compression: false, pdf_compression: false };
+        let lastDeletedFileId = null;
+        let lastDeletedBatchIds = [];
 
 
         // ============== API Client ==============
@@ -657,12 +732,18 @@
                 return response.json();
             },
             
-            async uploadFile(file, onProgress) {
+            async uploadFiles(fileList, onProgress) {
                 const formData = new FormData();
-                formData.append('file', file);
+                const fileNames = [];
                 
+                for (const file of fileList) {
+                    formData.append('files', file);
+                    fileNames.push(file.name);
+                }
+                
+                const uploadKey = fileNames.join('|');
                 const controller = new AbortController();
-                uploadControllers.set(file.name, controller);
+                uploadControllers.set(uploadKey, controller);
                 
                 return new Promise((resolve, reject) => {
                     const xhr = new XMLHttpRequest();
@@ -674,7 +755,7 @@
                     });
                     
                     xhr.addEventListener('load', () => {
-                        uploadControllers.delete(file.name);
+                        uploadControllers.delete(uploadKey);
                         if (xhr.status >= 200 && xhr.status < 300) {
                             resolve(JSON.parse(xhr.responseText));
                         } else {
@@ -683,12 +764,12 @@
                     });
                     
                     xhr.addEventListener('error', () => {
-                        uploadControllers.delete(file.name);
+                        uploadControllers.delete(uploadKey);
                         reject({ error: 'NETWORK_ERROR', message: 'Network error occurred' });
                     });
                     
                     xhr.addEventListener('abort', () => {
-                        uploadControllers.delete(file.name);
+                        uploadControllers.delete(uploadKey);
                         reject({ error: 'CANCELLED', message: 'Upload cancelled' });
                     });
                     
@@ -697,12 +778,50 @@
                 });
             },
             
+            async uploadFile(file, onProgress) {
+                // Legacy support - wrap single file in array
+                return this.uploadFiles([file], onProgress);
+            },
+            
             async deleteFile(fileId) {
                 const response = await fetch(`/api/v1/files/${fileId}`, { method: 'DELETE' });
-                if (!response.ok && response.status !== 204) {
+                if (!response.ok) {
                     throw await response.json();
                 }
-                return true;
+                return response.json();
+            },
+            
+            async restoreFile(fileId) {
+                const response = await fetch(`/api/v1/files/${fileId}/restore`, { method: 'POST' });
+                if (!response.ok) {
+                    throw await response.json();
+                }
+                return response.json();
+            },
+            
+            async batchRestore(fileIds) {
+                const response = await fetch('/api/v1/batch/restore', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_ids: fileIds })
+                });
+                return response.json();
+            },
+            
+            async getTrash() {
+                const response = await fetch('/api/v1/trash');
+                return response.json();
+            },
+            
+            async emptyTrash() {
+                const response = await fetch('/api/v1/trash', { method: 'DELETE' });
+                return response.json();
+            },
+            
+            async permanentlyDeleteFromTrash(fileId) {
+                const response = await fetch(`/api/v1/trash/${fileId}`, { method: 'DELETE' });
+                if (!response.ok) throw await response.json();
+                return response.json();
             },
             
             async renameFile(fileId, newName) {
@@ -767,29 +886,62 @@
 
         // ============== UI Helpers ==============
         function showToast(message, type = 'info') {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            
-            const colors = {
-                success: 'bg-success/20 border-success/50 text-success',
-                error: 'bg-danger/20 border-danger/50 text-danger',
-                info: 'bg-accent/20 border-accent/50 text-accent',
-                warning: 'bg-warning/20 border-warning/50 text-warning'
-            };
-            
-            toast.className = `px-4 py-3 rounded-xl border ${colors[type]} backdrop-blur-sm animate-slide-up flex items-center gap-3`;
-            toast.innerHTML = `
-                <span>${message}</span>
-                <button class="opacity-50 hover:opacity-100 transition-opacity">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            `;
-            
-            toast.querySelector('button').addEventListener('click', () => toast.remove());
-            container.appendChild(toast);
-            
-            setTimeout(() => toast.remove(), 5000);
-        }
+             const container = document.getElementById('toastContainer');
+             const toast = document.createElement('div');
+             
+             const colors = {
+                 success: 'bg-success/20 border-success/50 text-success',
+                 error: 'bg-danger/20 border-danger/50 text-danger',
+                 info: 'bg-accent/20 border-accent/50 text-accent',
+                 warning: 'bg-warning/20 border-warning/50 text-warning'
+             };
+             
+             toast.className = `px-4 py-3 rounded-xl border ${colors[type]} backdrop-blur-sm animate-slide-up flex items-center gap-3`;
+             toast.innerHTML = `
+                 <span>${message}</span>
+                 <button class="opacity-50 hover:opacity-100 transition-opacity">
+                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                 </button>
+             `;
+             
+             toast.querySelector('button').addEventListener('click', () => toast.remove());
+             container.appendChild(toast);
+             
+             setTimeout(() => toast.remove(), 5000);
+         }
+         
+        function showToastWithUndo(message, type = 'info', undoCallback) {
+             const container = document.getElementById('toastContainer');
+             const toast = document.createElement('div');
+             
+             const colors = {
+                 success: 'bg-success/20 border-success/50 text-success',
+                 error: 'bg-danger/20 border-danger/50 text-danger',
+                 info: 'bg-accent/20 border-accent/50 text-accent',
+                 warning: 'bg-warning/20 border-warning/50 text-warning'
+             };
+             
+             toast.className = `px-4 py-3 rounded-xl border ${colors[type]} backdrop-blur-sm animate-slide-up flex items-center justify-between gap-3`;
+             toast.innerHTML = `
+                 <span>${message}</span>
+                 <div class="flex items-center gap-2">
+                     <button class="undo-btn px-3 py-1 text-xs font-medium bg-accent text-dark-900 rounded hover:bg-accent-light transition-colors">Undo</button>
+                     <button class="opacity-50 hover:opacity-100 transition-opacity">
+                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                     </button>
+                 </div>
+             `;
+             
+             toast.querySelector('.undo-btn').addEventListener('click', () => {
+                 undoCallback();
+                 toast.remove();
+             });
+             
+             toast.querySelector('button:last-child').addEventListener('click', () => toast.remove());
+             container.appendChild(toast);
+             
+             setTimeout(() => toast.remove(), 10000);
+         }
 
         function getFileIcon(icon) {
             const icons = {
@@ -1034,31 +1186,81 @@
         }
 
         async function handleFileUpload(fileList) {
-            for (const file of fileList) {
-                const item = createUploadItem(file);
+            const fileArray = Array.from(fileList);
+            if (fileArray.length === 0) return;
+            
+            // Group files for batch upload (10 files at a time)
+            const batchSize = 10;
+            let uploaded = 0;
+            let failed = 0;
+            
+            for (let i = 0; i < fileArray.length; i += batchSize) {
+                const batch = fileArray.slice(i, i + batchSize);
+                const uploadItems = batch.map(file => ({
+                    file,
+                    item: createUploadItem(file)
+                }));
                 
-                const cancelBtn = item.querySelector('.cancel-upload');
-                cancelBtn.addEventListener('click', () => {
-                    const controller = uploadControllers.get(file.name);
-                    if (controller) controller.abort();
-                    removeUploadItem(item);
-                    showToast(`Upload cancelled: ${file.name}`, 'warning');
+                // Store batch upload key for cancellation
+                const uploadKey = `batch-${i}-${Date.now()}`;
+                
+                // Set up cancel handlers
+                uploadItems.forEach(({ file, item }) => {
+                    const cancelBtn = item.querySelector('.cancel-upload');
+                    cancelBtn.addEventListener('click', () => {
+                        const controller = uploadControllers.get(uploadKey);
+                        if (controller) controller.abort();
+                        uploadItems.forEach(({ item }) => removeUploadItem(item));
+                        showToast(`Upload batch cancelled`, 'warning');
+                    });
                 });
                 
                 try {
-                    await api.uploadFile(file, (progress) => {
-                        updateUploadProgress(item, progress);
-                    });
+                    // Store controller for this batch
+                    const controller = new AbortController();
+                    uploadControllers.set(uploadKey, controller);
                     
-                    removeUploadItem(item);
-                    showToast(`Uploaded: ${file.name}`, 'success');
+                    const result = await api.uploadFiles(
+                        batch,
+                        (progress) => {
+                            // Update all items with same progress
+                            uploadItems.forEach(({ item }) => {
+                                updateUploadProgress(item, progress);
+                            });
+                        }
+                    );
+                    
+                    uploadControllers.delete(uploadKey);
+                    
+                    // Remove upload items
+                    uploadItems.forEach(({ item }) => removeUploadItem(item));
+                    
+                    // Show summary
+                    uploaded += result.total_uploaded;
+                    failed += result.total_errors;
+                    
+                    if (result.total_uploaded > 0) {
+                        showToast(`Uploaded ${result.total_uploaded} file(s)`, 'success');
+                    }
+                    if (result.total_errors > 0) {
+                        result.errors.forEach(err => {
+                            showToast(`Failed: ${err.filename} - ${err.message}`, 'error');
+                        });
+                    }
+                    
                     loadFiles();
                 } catch (error) {
                     if (error.error !== 'CANCELLED') {
-                        removeUploadItem(item);
-                        showToast(`Failed to upload ${file.name}: ${error.message}`, 'error');
+                        uploadItems.forEach(({ item }) => removeUploadItem(item));
+                        showToast(`Batch upload failed: ${error.message}`, 'error');
+                        failed += batch.length;
                     }
                 }
+            }
+            
+            if (uploaded > 0 || failed === 0) {
+                // Refresh after all uploads complete
+                setTimeout(loadFiles, 500);
             }
         }
 
@@ -1146,22 +1348,56 @@
         }
 
         function closeDeleteModal() {
-            document.getElementById('deleteModal').classList.add('hidden');
-            currentFileId = null;
-        }
+             document.getElementById('deleteModal').classList.add('hidden');
+             // Reset modal sections
+             document.getElementById('deleteConfirmSection').classList.remove('hidden');
+             document.getElementById('deleteSuccessSection').classList.add('hidden');
+             currentFileId = null;
+             lastDeletedFileId = null;
+         }
 
         async function confirmDelete() {
-            if (!currentFileId) return;
-            
-            try {
-                await api.deleteFile(currentFileId);
-                showToast('File deleted', 'success');
-                closeDeleteModal();
-                loadFiles();
-            } catch (error) {
-                showToast(`Failed to delete: ${error.message}`, 'error');
-            }
-        }
+             if (!currentFileId) return;
+             
+             try {
+                 const result = await api.deleteFile(currentFileId);
+                 lastDeletedFileId = currentFileId;
+                 
+                 // Show success screen with undo button
+                 const confirmSection = document.getElementById('deleteConfirmSection');
+                 const successSection = document.getElementById('deleteSuccessSection');
+                 const successFileName = document.getElementById('deleteSuccessFileName');
+                 
+                 successFileName.textContent = result.filename || 'File';
+                 confirmSection.classList.add('hidden');
+                 successSection.classList.remove('hidden');
+                 
+                 showToast('File deleted. Click "Undo" in the modal to recover.', 'warning');
+                 updateTrashCount();
+                 loadFiles();
+             } catch (error) {
+                 showToast(`Failed to delete: ${error.message}`, 'error');
+             }
+         }
+         
+        async function undoDelete() {
+             if (!lastDeletedFileId) return;
+             
+             try {
+                 await api.restoreFile(lastDeletedFileId);
+                 showToast('File restored successfully', 'success');
+                 closeDeleteModal();
+                 loadFiles();
+                 updateTrashCount();
+             } catch (error) {
+                 if (error.error === 'TRASH_EXPIRED') {
+                     showToast('Recovery period expired (24 hours). File cannot be recovered.', 'error');
+                 } else {
+                     showToast(`Failed to restore: ${error.message}`, 'error');
+                 }
+                 closeDeleteModal();
+             }
+         }
 
         // ============== Batch Operations ==============
         function updateSelectedCount() {
@@ -1187,20 +1423,49 @@
         }
 
         async function batchDelete() {
-            if (selectedFiles.size === 0) return;
-            
-            if (!confirm(`Delete ${selectedFiles.size} files? This cannot be undone.`)) return;
-            
-            try {
-                const result = await api.batchDelete(Array.from(selectedFiles));
-                showToast(`Deleted ${result.total_deleted} files`, 'success');
-                selectedFiles.clear();
-                updateSelectedCount();
-                loadFiles();
-            } catch (error) {
-                showToast(`Delete failed: ${error.message}`, 'error');
-            }
-        }
+             if (selectedFiles.size === 0) return;
+             
+             const fileCount = selectedFiles.size;
+             if (!confirm(`Delete ${fileCount} files? You can undo within 24 hours.`)) return;
+             
+             try {
+                 const result = await api.batchDelete(Array.from(selectedFiles));
+                 lastDeletedBatchIds = result.deleted;
+                 selectedFiles.clear();
+                 updateSelectedCount();
+                 
+                 // Show undo toast with action
+                 showToastWithUndo(
+                     `Deleted ${result.total_deleted} file(s). Undo within 24 hours.`,
+                     'warning',
+                     undoBatchDelete
+                 );
+                 
+                 loadFiles();
+                 updateTrashCount();
+             } catch (error) {
+                 showToast(`Delete failed: ${error.message}`, 'error');
+             }
+         }
+         
+        async function undoBatchDelete() {
+             if (lastDeletedBatchIds.length === 0) return;
+             
+             try {
+                 const result = await api.batchRestore(lastDeletedBatchIds);
+                 showToast(`Restored ${result.total_restored} file(s)`, 'success');
+                 lastDeletedBatchIds = [];
+                 loadFiles();
+                 updateTrashCount();
+             } catch (error) {
+                 if (error.error === 'TRASH_EXPIRED') {
+                     showToast('Recovery period expired (24 hours). Files cannot be recovered.', 'error');
+                 } else {
+                     showToast(`Restore failed: ${error.message}`, 'error');
+                 }
+                 lastDeletedBatchIds = [];
+             }
+         }
 
         // ============== Data Loading ==============
         async function loadFiles() {
@@ -1280,9 +1545,19 @@
             
             // Drag and drop
             const dropZone = document.getElementById('dropZone');
-            const fileInput = document.getElementById('fileInput');
+            const fileInputFolder = document.getElementById('fileInputFolder');
+            const fileInputFiles = document.getElementById('fileInputFiles');
             
-            dropZone.addEventListener('click', () => fileInput.click());
+            // Click to upload - default to files, with Ctrl/Cmd for folders
+            dropZone.addEventListener('click', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    // Ctrl/Cmd+Click opens folder picker
+                    fileInputFolder.click();
+                } else {
+                    // Regular click opens file picker
+                    fileInputFiles.click();
+                }
+            });
             
             dropZone.addEventListener('dragover', (e) => {
                 e.preventDefault();
@@ -1300,10 +1575,17 @@
                 handleFileUpload(e.dataTransfer.files);
             });
             
-            fileInput.addEventListener('change', () => {
-                if (fileInput.files.length > 0) {
-                    handleFileUpload(fileInput.files);
-                    fileInput.value = '';
+            fileInputFolder.addEventListener('change', () => {
+                if (fileInputFolder.files.length > 0) {
+                    handleFileUpload(fileInputFolder.files);
+                    fileInputFolder.value = '';
+                }
+            });
+            
+            fileInputFiles.addEventListener('change', () => {
+                if (fileInputFiles.files.length > 0) {
+                    handleFileUpload(fileInputFiles.files);
+                    fileInputFiles.value = '';
                 }
             });
             
@@ -1433,6 +1715,8 @@
             // Delete modal
             document.getElementById('cancelDelete').addEventListener('click', closeDeleteModal);
             document.getElementById('confirmDelete').addEventListener('click', confirmDelete);
+            document.getElementById('closeDelete').addEventListener('click', closeDeleteModal);
+            document.getElementById('undoDelete').addEventListener('click', undoDelete);
             document.getElementById('deleteOverlay').addEventListener('click', closeDeleteModal);
             
             // Connection modal
@@ -1447,6 +1731,13 @@
             // Load settings and compression support
             loadSettings();
             loadCompressionSupport();
+            
+            // Trash modal
+            document.getElementById('trashBtn').addEventListener('click', openTrashModal);
+            document.getElementById('closeTrash').addEventListener('click', closeTrashModal);
+            document.getElementById('trashOverlay').addEventListener('click', closeTrashModal);
+            document.getElementById('emptyTrashBtn').addEventListener('click', emptyTrash);
+            updateTrashCount();
             
             // Settings modal
             document.getElementById('settingsBtn').addEventListener('click', openSettingsModal);
@@ -1562,6 +1853,154 @@
         
         function closeSettingsModal() {
             document.getElementById('settingsModal').classList.add('hidden');
+        }
+        
+        // ============== Trash Modal ==============
+        async function openTrashModal() {
+            document.getElementById('trashModal').classList.remove('hidden');
+            await loadTrash();
+        }
+        
+        function closeTrashModal() {
+            document.getElementById('trashModal').classList.add('hidden');
+        }
+        
+        async function loadTrash() {
+            const trashList = document.getElementById('trashList');
+            const trashEmpty = document.getElementById('trashEmpty');
+            const trashCount = document.getElementById('trashCount');
+            const trashActions = document.getElementById('trashActions');
+            
+            try {
+                const data = await api.getTrash();
+                
+                // Update trash count badge
+                if (data.total > 0) {
+                    trashCount.textContent = data.total > 9 ? '9+' : data.total;
+                    trashCount.classList.remove('hidden');
+                    trashActions.classList.remove('hidden');
+                } else {
+                    trashCount.classList.add('hidden');
+                    trashActions.classList.add('hidden');
+                }
+                
+                if (data.files.length === 0) {
+                    trashList.classList.add('hidden');
+                    trashEmpty.classList.remove('hidden');
+                    return;
+                }
+                
+                trashList.classList.remove('hidden');
+                trashEmpty.classList.add('hidden');
+                
+                trashList.innerHTML = data.files.map(file => {
+                    const expiresAt = new Date(file.expires_at);
+                    const now = new Date();
+                    const hoursLeft = Math.max(0, Math.round((expiresAt - now) / (1000 * 60 * 60)));
+                    
+                    return `
+                        <div class="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="w-8 h-8 rounded-lg bg-dark-600 flex items-center justify-center flex-shrink-0">
+                                    ${getFileIconSvg(file.icon)}
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium text-white truncate">${escapeHtml(file.filename)}</p>
+                                    <p class="text-xs text-gray-500">${file.size_formatted} • ${hoursLeft}h left</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 flex-shrink-0">
+                                <button onclick="restoreFromTrash('${file.id}')" class="px-3 py-1.5 text-xs font-medium bg-accent/20 text-accent rounded-lg hover:bg-accent/30 transition-colors">
+                                    Restore
+                                </button>
+                                <button onclick="permanentlyDelete('${file.id}')" class="p-1.5 text-gray-500 hover:text-danger rounded-lg hover:bg-danger/20 transition-colors" title="Delete permanently">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Failed to load trash:', error);
+                showToast('Failed to load trash', 'error');
+            }
+        }
+        
+        async function restoreFromTrash(fileId) {
+            try {
+                await api.restoreFile(fileId);
+                showToast('File restored successfully', 'success');
+                await loadTrash();
+                loadFiles();
+            } catch (error) {
+                if (error.error === 'TRASH_EXPIRED') {
+                    showToast('Recovery period expired', 'error');
+                } else {
+                    showToast('Failed to restore file', 'error');
+                }
+                await loadTrash();
+            }
+        }
+        
+        async function permanentlyDelete(fileId) {
+            if (!confirm('Permanently delete this file? This cannot be undone.')) return;
+            
+            try {
+                await api.permanentlyDeleteFromTrash(fileId);
+                showToast('File permanently deleted', 'success');
+                await loadTrash();
+                updateTrashCount();
+            } catch (error) {
+                showToast('Failed to delete file', 'error');
+            }
+        }
+        
+        async function emptyTrash() {
+            if (!confirm('Permanently delete all files in trash? This cannot be undone.')) return;
+            
+            try {
+                const result = await api.emptyTrash();
+                showToast(result.message, 'success');
+                await loadTrash();
+                updateTrashCount();
+            } catch (error) {
+                showToast('Failed to empty trash', 'error');
+            }
+        }
+        
+        function getFileIconSvg(icon) {
+            const icons = {
+                'file-text': '<svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>',
+                'image': '<svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>',
+                'video': '<svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>',
+                'music': '<svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>',
+                'archive': '<svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>',
+                'code': '<svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>',
+                'table': '<svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>',
+                'file': '<svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>'
+            };
+            return icons[icon] || icons['file'];
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        async function updateTrashCount() {
+            try {
+                const data = await api.getTrash();
+                const trashCount = document.getElementById('trashCount');
+                if (data.total > 0) {
+                    trashCount.textContent = data.total > 9 ? '9+' : data.total;
+                    trashCount.classList.remove('hidden');
+                } else {
+                    trashCount.classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('Failed to update trash count:', error);
+            }
         }
         
         async function saveSettings() {

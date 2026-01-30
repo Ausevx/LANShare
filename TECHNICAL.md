@@ -67,12 +67,17 @@ Frontend interface built with modern web standards:
 
 ### File Upload with Drag-and-Drop Support
 
-Users can upload files by:
-- Dragging files directly onto the drop zone
+Users can upload files and folders by:
+- Dragging files or folders directly onto the drop zone
 - Clicking the upload area to open a file browser
 - Dropping files anywhere on the page for global upload support
+- Shift+clicking the upload area to toggle between folder and file selection modes
 
-The upload system handles multiple files simultaneously with individual progress tracking.
+The upload system features:
+- **Multiple file uploads**: Process up to 10 files per batch automatically
+- **Folder structure preservation**: Nested folders maintain their hierarchy in storage
+- **Real-time progress tracking**: Visual feedback for upload completion
+- **Batch error handling**: Individual error reporting per file with summary statistics
 
 ### QR Code Sharing for Easy LAN Access
 
@@ -123,6 +128,22 @@ Configurable application preferences:
 - **Directory Browser**: Visual folder picker to navigate and select directories
 - Settings persist across sessions via server-side storage
 
+### Undo Delete (Trash Recovery)
+
+When files are deleted, they are moved to a temporary trash instead of permanent deletion:
+
+1. **Deletion Process**: Files moved to `.trash.json` with metadata
+2. **Recovery Window**: 24 hours to recover deleted files
+3. **Automatic Cleanup**: Expired trash entries are cleaned up after 24 hours
+4. **Single & Batch**: Works for both individual file delete and batch delete operations
+5. **UI Integration**: Delete confirmation modal shows undo button after deletion
+
+**Implementation Details**:
+- Trash stored in `.trash.json` alongside metadata
+- Each trash entry contains: file info, deletion timestamp, expiration timestamp
+- Restoration only requires re-adding to metadata (physical file never deleted)
+- Expired recovery periods automatically prevent restoration attempts
+
 ### File Compression for PDFs and Images
 
 Download optimization for supported files:
@@ -151,6 +172,33 @@ The compression feature provides on-demand file optimization for downloads:
 - **PDF Compression**: Reduces embedded image quality within PDF documents while preserving text clarity
 - **Streaming Response**: Compressed files are streamed directly to the client without temporary storage
 
+### Multi-File & Folder Upload Implementation
+
+The upload endpoint handles multiple files efficiently:
+
+1. **Request Format**: Files are sent as multipart form data with `files[]` field
+2. **Path Preservation**: When uploading folders via `webkitdirectory`, full paths are preserved:
+   - `folder/subfolder/file.txt` → creates nested folder structure
+   - File paths are normalized to work across operating systems
+3. **Batch Processing**: Files are processed in batches of 10 to manage memory efficiently
+4. **Error Handling**: Individual file errors are collected and reported separately:
+   - Invalid file types skip gracefully without blocking other files
+   - File size violations are caught and reported per-file
+   - Folder creation failures are handled with fallback messaging
+5. **Response Format**:
+   ```json
+   {
+     "uploaded": [
+       { "id": "uuid", "filename": "file.txt", "size": 1024, ... }
+     ],
+     "errors": [
+       { "filename": "bad.exe", "error": "INVALID_TYPE", "message": "..." }
+     ],
+     "total_uploaded": 1,
+     "total_errors": 1
+   }
+   ```
+
 ---
 
 ## API Endpoints
@@ -160,16 +208,18 @@ The compression feature provides on-demand file optimization for downloads:
 | `GET` | `/` | Serves the main web interface |
 | `GET` | `/health` | Health check with server status and statistics |
 | `GET` | `/api/v1/connection` | Returns server IP, port, and connection URL |
-| `POST` | `/api/v1/upload` | Upload a new file |
+| `POST` | `/api/v1/upload` | Upload multiple files with folder support |
 | `GET` | `/api/v1/files` | List files with optional filtering and sorting |
 | `GET` | `/api/v1/files/<id>/download` | Download a specific file |
 | `GET` | `/api/v1/files/<id>/preview` | Get file preview (images, text, PDFs) |
-| `DELETE` | `/api/v1/files/<id>` | Delete a specific file |
+| `DELETE` | `/api/v1/files/<id>` | Delete a specific file (moves to trash) |
+| `POST` | `/api/v1/files/<id>/restore` | Restore a deleted file from trash |
 | `PATCH` | `/api/v1/files/<id>/rename` | Rename a file |
 | `GET` | `/api/v1/search` | Search files by name |
 | `POST` | `/api/v1/folders` | Create a new folder |
 | `POST` | `/api/v1/batch/download` | Download multiple files as ZIP |
-| `POST` | `/api/v1/batch/delete` | Delete multiple files |
+| `POST` | `/api/v1/batch/delete` | Delete multiple files (moves to trash) |
+| `POST` | `/api/v1/batch/restore` | Restore multiple deleted files |
 | `GET` | `/api/v1/stats` | Get platform statistics |
 | `GET` | `/api/v1/settings` | Get application settings |
 | `PUT` | `/api/v1/settings` | Update application settings |
